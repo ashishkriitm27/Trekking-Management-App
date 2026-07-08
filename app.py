@@ -19,6 +19,7 @@ def create_app():
 
 app = create_app()
 
+from application.controllers import *
 
 if __name__ == '__main__':
     with app.app_context():

@@ -1,0 +1,52 @@
+<!-- Login HTML Code -->
+
+
+{% extends 'base.html' %}  
+
+{% set sidebar = False %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-4">
+
+        <div class="card p-4 shadow">
+
+            <h3 class="text-center mb-4">Login</h3>
+            {% if error %}
+            <div class="alert alert-danger">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            {% if success %}
+            <div class="alert alert-success">
+                {{ success }}
+            </div>
+            {% endif %}
+            <!-- Login form  -->
+            <form method="POST" action="{{ url_for('login') }}">
+
+                <input class="form-control mb-3" name="email" type="email" placeholder="Email">
+
+                <input class="form-control mb-3" name="password" type="password" placeholder="Password">
+
+                <button class="btn btn-primary w-100" type="submit">
+                    Login
+                </button>
+
+            </form>
+            <!-- Registration URL -->
+            <p class="mt-3 text-center">
+                Don't have account?
+                <a href="{{ url_for('register') }}">Register</a>
+            </p>
+
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
