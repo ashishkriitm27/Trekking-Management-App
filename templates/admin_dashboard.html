@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% set sidebar = True %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- Dashboard heading -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold">
+        Welcome, {{ username }}
+    </h3>
+</div>
+
+<!-- Admin shortcuts -->
+<div class="card mb-4">
+    <div class="card-header">
+        Quick Actions
+    </div>
+
+    <div class="card-body">
+        <a href="/admin/treks" class="btn btn-primary dashboard-btn">
+            Manage Treks
+        </a>
+
+        <a href="/admin/users" class="btn btn-success dashboard-btn">
+            Manage Users
+        </a>
+
+        <a href="/admin/staff" class="btn btn-info dashboard-btn">
+            Manage Staff
+        </a>
+
+        <a href="/admin/pending_staff" class="btn btn-warning dashboard-btn">
+            Pending Staff ({{ pending_staff }})
+        </a>
+    </div>
+</div>
+
+<!-- Dashboard statistics -->
+<div class="row">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6>Total Treks</h6>
+                <h2>{{ total_treks }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6>Total Users</h6>
+                <h2>{{ total_users }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6>Total Staff</h6>
+                <h2>{{ total_staff }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6>Total Bookings</h6>
+                <h2>{{ total_bookings }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pending approval count -->
+<div class="row mt-2">
+    <div class="col-md-3">
+        <div class="card border-warning text-center">
+            <div class="card-body">
+                <h6>Pending Staff</h6>
+                <h2>{{ pending_staff }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Latest booking records -->
+<div class="card mt-4">
+    <div class="card-header">
+        Recent Bookings
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-striped align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>User</th>
+                    <th>Trek</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% if recent_bookings %}
+                    {% for booking in recent_bookings %}
+                    <tr>
+                        <td>{{ booking.id }}</td>
+                        <td>{{ booking.user.username }}</td>
+                        <td>{{ booking.trek.name }}</td>
+                        <td>
+                            {% if booking.status == 'Booked' %}
+                                <span class="badge bg-success">
+                                    {{ booking.status }}
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    {{ booking.status }}
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center">
+                            No Bookings Yet
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

@@ -3,6 +3,7 @@ from flask import current_app as app
 from .models import *
 from .database import db
 
+from datetime import datetime
 # Home Route
 
 @app.route('/')
@@ -55,6 +56,13 @@ def login():
     return render_template('login.html')
 
 
+#Log out
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('You have been logged out.', 'info')
+    return redirect('/login')
+
 # Registration Route
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -103,3 +111,412 @@ def register():
         return redirect('/login')
 
     return render_template('register.html')
+#Dashboard
+@app.route('/dashboard')
+def dashboard():
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    role = session.get('role')
+
+    if role == 'admin':
+        return redirect('/admin_dashboard')
+
+    elif role == 'staff':
+        return redirect('/staff_dashboard')
+
+    else:
+        return redirect('/user_dashboard')
+    
+# -------------Admin--------------
+#Dashabord
+@app.route('/admin_dashboard')
+def admin_dashbaord():
+    if 'user_id' not in session:
+        return redirect('/login')
+    if session.get('role') != 'admin':
+        return redirect('/login')
+
+    total_users = User.query.filter_by(type = 'user').count()
+    total_staff = User.query.filter_by(type = 'staff').count()
+    pending_staff = User.query.filter_by(type = 'staff', is_approved =False).count()
+    total_treks = Trek.query.count()
+    total_bookings = Booking.query.count()
+    recent_bookings = Booking.query.order_by(Booking.id.desc()).limit(7).all()
+    
+    return render_template(
+        'admin_dashboard.html',
+        username = session.get('username'),
+        total_users=total_users,
+        total_staff=total_staff,
+        pending_staff=pending_staff,
+        total_treks=total_treks,
+        total_bookings=total_bookings,
+        recent_bookings=recent_bookings
+    )
+    
+#Manage User
+
+@app.route('/admin/users')
+def admin_users():
+    if 'user_id' not in session:
+        return redirect('/login')
+    if session.get('role') != 'admin':
+        return redirect('/login')
+    
+    search = request.args.get('search','').strip()
+    
+    if search:
+        users = User.query.filter(User.type =='user',
+                                  db.or_(
+                                      User.username.ilike(f'${search}'),
+                                      User.email.ilike(f'${search}'),
+                                  )).all()
+    else:
+        users = User.query.filter_by(
+            type='user'
+        ).all()
+    
+    return render_template(
+        'admin_users.html',
+        users=users,
+        search=search
+    )
+
+#Manage Staff
+
+@app.route('/admin/staff')
+def admin_staff():
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if session.get('role') != 'admin':
+        return redirect('/login')
+
+    search = request.args.get('search', '').strip()
+
+    if search:
+
+        staffs = User.query.filter(
+            User.type == 'staff',
+            db.or_(
+                User.username.ilike(f'%{search}%'),
+                User.email.ilike(f'%{search}%')
+            )
+        ).all()
+
+    else:
+
+        staffs = User.query.filter_by(
+            type='staff'
+        ).all()
+
+    return render_template(
+        'admin_staff.html',
+        staffs=staffs,
+        search=search
+    )
+#View all
+@app.route('/admin/all')
+def admin_all():
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if session.get('role') != 'admin':
+        return redirect('/login')
+
+    search = request.args.get('search', '').strip()
+
+    if search:
+
+        us = User.query.filter(
+            User.type != 'admin',
+            db.or_(
+                User.username.ilike(f'%{search}%'),
+                User.email.ilike(f'%{search}%')
+            )
+        ).all()
+
+    else:
+
+        us = User.query.filter(
+            User.type.in_(['user', 'staff'])
+        ).all()
+
+    return render_template(
+        'admin_remove.html',
+        us=us,
+        search=search
+    )
+
+#Pedning Staff and  Approve Staff
+
+@app.route('/admin/pending_staff')
+def pending_staff():
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if session.get('role') != 'admin':
+        return redirect('/login')
+
+    staffs = User.query.filter_by(
+        type='staff',
+        is_approved=False
+    ).all()
+
+    return render_template(
+        'pending_staff.html',
+        staffs=staffs
+    )
+
+@app.route('/admin/approve_staff/<int:id>')
+def approve_staff(id):
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if session.get('role') != 'admin':
+        return redirect('/login')
+
+    staff = User.query.get_or_404(id)
+    staff.is_approved = True
+    db.session.commit()
+    flash('Staff approved successfully.', 'success')
+    return redirect('/admin/pending_staff')
+
+#Blacklist and Unblack
+
+    
+@app.route('/admin/blacklist_user/<int:id>')
+def blacklist_user(id):
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if session.get('role') != 'admin':
+        return redirect('/login')
+
+    user = User.query.get_or_404(id)
+    user.is_blacklist = True
+    db.session.commit()
+    flash('User has been blacklisted.', 'warning')
+    return redirect('/admin/users')
+
+
+
+@app.route('/admin/unblacklist_user/<int:id>')
+def unblacklist_user(id):
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if session.get('role') != 'admin':
+        return redirect('/login')
+
+    user = User.query.get_or_404(id)
+    user.is_blacklist = False
+    db.session.commit()
+    flash('User removed from blacklist.', 'success')
+    return redirect('/admin/users')
+
+@app.route('/admin/blacklist_staff/<int:id>')
+def blacklist_staff(id):
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if session.get('role') != 'admin':
+        return redirect('/login')
+
+    staff = User.query.get_or_404(id)
+    staff.is_blacklist = True
+    db.session.commit()
+    flash('Staff has been blacklisted.', 'warning')
+    return redirect('/admin/staff')
+
+
+@app.route('/admin/unblacklist_staff/<int:id>')
+def unblacklist_staff(id):
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if session.get('role') != 'admin':
+        return redirect('/login')
+
+    staff = User.query.get_or_404(id)
+
+    staff.is_blacklist = False
+
+    db.session.commit()
+    flash('Staff removed from blacklist.', 'success')
+    return redirect('/admin/staff')
+
+
+
+#View treak
+
+@app.route('/admin/treks')
+def admin_treks():
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if session.get('role') != 'admin':
+        return redirect('/login')
+
+    # Search Text
+    search = request.args.get('search', '').strip()
+
+    if search:
+
+        treks = Trek.query.filter(
+            db.or_(
+                Trek.name.ilike(f"%{search}%"),
+                Trek.location.ilike(f"%{search}%")
+            )
+        ).all()
+
+    else:
+
+        treks = Trek.query.all()
+
+    # Approved Staff
+    staffs = User.query.filter_by(
+        type='staff',
+        is_approved=True
+    ).all()
+
+    return render_template(
+        'admin_treks.html',
+        treks=treks,
+        staffs=staffs,
+        search=search
+    )    
+
+# Add treak
+
+@app.route('/admin/add_trek', methods=['GET', 'POST'])
+def add_trek():
+
+    # Allow only logged-in admins
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if session.get('role') != 'admin':
+        return redirect('/login')
+
+    if request.method == 'POST':
+
+        # Get form data
+        name = request.form['name']
+        location = request.form['location']
+        difficulty = request.form['difficulty']
+        duration = int(request.form['duration'])
+        slot = int(request.form['available_slot'])
+
+        start = datetime.strptime(
+            request.form['start_date'],
+            '%Y-%m-%d'
+        ).date()
+
+        end = datetime.strptime(
+            request.form['end_date'],
+            '%Y-%m-%d'
+        ).date()
+
+        # Validate dates
+        if end < start:
+            flash(
+                'End Date cannot be before Start Date.',
+                'danger'
+            )
+            return redirect('/admin/add_trek')
+
+        # Validate available slots
+        if slot <= 0:
+            flash(
+                'Available Slots must be greater than 0.',
+                'danger'
+            )
+            return redirect('/admin/add_trek')
+
+        # Create a new trek
+        trek = Trek(
+            name=name,
+            location=location,
+            difficulty=difficulty,
+            duration=duration,
+            available_slot=slot,
+            start_date=start,
+            end_date=end
+        )
+
+        db.session.add(trek)
+        db.session.commit()
+
+        flash(
+            'Trek Added Successfully.',
+            'success'
+        )
+
+        return redirect('/admin/treks')
+
+    return render_template('add_trek.html')
+
+
+#Edit trek
+@app.route('/admin/edit_trek/<int:id>', methods=['GET', 'POST'])
+def edit_trek(id):
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if session.get('role') != 'admin':
+        return redirect('/login')
+
+    trek = Trek.query.get_or_404(id)
+    staffs = User.query.filter_by(
+        type='staff',
+        is_approved=True,
+        is_blacklist=False
+    ).all()
+    if request.method == 'POST':
+        trek.name = request.form['name']
+        trek.location = request.form['location']
+        trek.difficulty = request.form['difficulty']
+        trek.duration = int(request.form['duration'])
+        trek.available_slot = int(request.form['available_slot'])
+        staff_id = request.form.get('staff_id',)
+        trek.staff_id = int(staff_id) if staff_id else None
+        db.session.commit()
+        flash('Trek updated successfully.', 'success')
+        return redirect('/admin/treks')
+    return render_template('edit_trek.html', trek=trek, staffs=staffs)
+
+#Delete treak
+
+
+@app.route('/admin/delete_trek/<int:id>')
+def delete_trek(id):
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if session.get('role') != 'admin':
+        return redirect('/login')
+
+    trek = Trek.query.get_or_404(id)
+    booking = Booking.query.filter_by(trek_id=id).first()
+    if booking:
+        flash('Cannot delete trek: existing bookings found.', 'warning')
+        return redirect('/admin/treks')
+    db.session.delete(trek)
+    db.session.commit()
+    flash('Trek deleted successfully.', 'success')
+    return redirect('/admin/treks')
+

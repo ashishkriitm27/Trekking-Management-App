@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% set sidebar = True %}
+
+{% block title %}Manage Staff{% endblock %}
+
+{% block content %}
+
+<!-- Staff management page -->
+<div class="container mt-5">
+
+    <h2 class="mb-4">Manage Staff</h2>
+
+    <!-- Search staff -->
+    <form method="GET" action="/admin/staff" class="mb-4">
+        <div class="input-group">
+            <input type="text"
+                   name="search"
+                   class="form-control"
+                   placeholder="Search Staff"
+                   value="{{ search }}">
+
+            <button class="btn btn-primary">
+                Search
+            </button>
+
+            <a href="/admin/staff" class="btn btn-secondary">
+                Clear
+            </a>
+        </div>
+    </form>
+
+    <!-- Staff list -->
+    <table class="table table-bordered table-hover">
+
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Assigned Treks</th>
+                <th>Approval</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% if staffs %}
+                {% for staff in staffs %}
+                <tr>
+                    <td>{{ staff.id }}</td>
+                    <td>{{ staff.username }}</td>
+                    <td>{{ staff.email }}</td>
+                    <td>{{ staff.assigned_treks|length }}</td>
+
+                    <td>
+                        {% if staff.is_approved %}
+                            <span class="badge bg-success">
+                                Approved
+                            </span>
+                        {% else %}
+                            <span class="badge bg-warning">
+                                Pending
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if staff.is_blacklist %}
+                            <span class="badge bg-danger">
+                                Blacklisted
+                            </span>
+                        {% else %}
+                            <span class="badge bg-success">
+                                Active
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if staff.is_blacklist %}
+                            <a href="/admin/unblacklist_staff/{{ staff.id }}" class="btn btn-success btn-sm">
+                                Unblacklist
+                            </a>
+                        {% else %}
+                            <a href="/admin/blacklist_staff/{{ staff.id }}" class="btn btn-danger btn-sm">
+                                Blacklist
+                            </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="7" class="text-center">
+                        No Staff Found
+                    </td>
+                </tr>
+            {% endif %}
+        </tbody>
+
+    </table>
+
+</div>
+
+{% endblock %}

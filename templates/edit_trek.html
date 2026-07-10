@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<!-- Trek update page -->
+<div class="container mt-5">
+
+    <div class="card shadow">
+
+        <div class="card-header">
+            <h3>Edit Trek</h3>
+        </div>
+
+        <div class="card-body">
+
+            <!-- Trek details form -->
+            <form method="POST">
+
+                <div class="mb-3">
+                    <label class="form-label">Trek Name</label>
+                    <input type="text"
+                           name="name"
+                           class="form-control"
+                           value="{{ trek.name }}"
+                           required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Location</label>
+                    <input type="text"
+                           name="location"
+                           class="form-control"
+                           value="{{ trek.location }}"
+                           required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Difficulty</label>
+
+                    <select name="difficulty" class="form-select">
+                        <option value="Easy" {% if trek.difficulty=="Easy" %}selected{% endif %}>
+                            Easy
+                        </option>
+
+                        <option value="Moderate" {% if trek.difficulty=="Moderate" %}selected{% endif %}>
+                            Moderate
+                        </option>
+
+                        <option value="Hard" {% if trek.difficulty=="Hard" %}selected{% endif %}>
+                            Hard
+                        </option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Duration</label>
+                    <input type="number"
+                           name="duration"
+                           class="form-control"
+                           value="{{ trek.duration }}"
+                           required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Available Slots</label>
+                    <input type="number"
+                           name="available_slot"
+                           class="form-control"
+                           value="{{ trek.available_slot }}"
+                           required>
+                </div>
+
+                <!-- Staff assignment -->
+                <div class="mb-4">
+                    <label class="form-label">Assigned Staff</label>
+
+                    <select name="staff_id" class="form-select">
+
+                        <option value="">
+                            -- No Staff Assigned --
+                        </option>
+
+                        {% for staff in staffs %}
+                        <option value="{{ staff.id }}"
+                                {% if trek.staff_id == staff.id %}selected{% endif %}>
+                            {{ staff.username }}
+                        </option>
+                        {% endfor %}
+
+                    </select>
+                </div>
+
+                <button class="btn btn-success">
+                    Update Trek
+                </button>
+
+                <a href="/admin/treks" class="btn btn-secondary">
+                    Cancel
+                </a>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

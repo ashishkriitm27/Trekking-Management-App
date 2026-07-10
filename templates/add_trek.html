@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<!-- Trek creation form -->
+<div class="container mt-5">
+    <div class="card p-4 shadow">
+
+        <h2>Add Trek</h2>
+
+        <form method="POST">
+            <input class="form-control mb-3" name="name" placeholder="Trek Name" required>
+
+            <input class="form-control mb-3" name="location" placeholder="Location" required>
+
+            <select class="form-select mb-3" name="difficulty">
+                <option value="Easy">Easy</option>
+                <option value="Moderate">Moderate</option>
+                <option value="Hard">Hard</option>
+            </select>
+
+            <input class="form-control mb-3" type="number" name="duration" placeholder="Duration (Days)" required>
+
+            <input class="form-control mb-3" type="number" name="available_slot" placeholder="Available Slots" required>
+
+            <!-- Trek schedule -->
+            <label>Start Date</label>
+            <input class="form-control mb-3" type="date" name="start_date" required>
+
+            <label>End Date</label>
+            <input class="form-control mb-3" type="date" name="end_date" required>
+
+            <button class="btn btn-success">
+                Add Trek
+            </button>
+            <a href="/admin/add_trek" class="btn btn-secondary">Reset</a>
+            <a href="/admin/treks" class="btn btn-danger">Cancel</a>
+        </form>
+
+    </div>
+</div>
+
+{% endblock %}
