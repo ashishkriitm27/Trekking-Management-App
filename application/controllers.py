@@ -520,3 +520,136 @@ def delete_trek(id):
     flash('Trek deleted successfully.', 'success')
     return redirect('/admin/treks')
 
+# Staff Routes
+
+
+@app.route('/staff_dashboard')
+def staff_dashboard():
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if session.get('role') != 'staff':
+        return redirect('/login')
+
+    treks = Trek.query.filter_by(
+        staff_id=session['user_id']
+    ).all()
+
+    total_treks = len(treks)
+
+    open_treks = Trek.query.filter_by(
+        staff_id=session['user_id'],
+        status='Open'
+    ).count()
+
+    total_participants = Booking.query.join(Trek).filter(
+        Trek.staff_id == session['user_id']
+    ).count()
+
+    return render_template(
+        'staff_dashboard.html',
+        treks=treks,
+        total_treks=total_treks,
+        open_treks=open_treks,
+        total_participants=total_participants
+    )
+
+#Staff manage treaks
+@app.route('/staff/manage_trek/<int:trek_id>', methods=['GET', 'POST'])
+def manage_trek(trek_id):
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if session.get('role') != 'staff':
+        return redirect('/login')
+
+    trek = Trek.query.filter_by(
+        id=trek_id,
+        staff_id=session['user_id']
+    ).first_or_404()
+
+    if request.method == 'POST':
+
+        new_slot = int(request.form['available_slots'])
+
+        if new_slot > trek.available_slot:
+            flash('You cannot increase slots assigned by Admin.', 'danger')
+            return redirect(request.url)
+
+        trek.available_slot = new_slot
+        trek.status = request.form['status']
+
+        db.session.commit()
+
+        flash('Trek details updated.', 'success')
+        return redirect('/staff_dashboard')
+
+    bookings = Booking.query.filter_by(trek_id=trek.id).all()
+    count = Booking.query.filter_by(trek_id=trek.id).count()
+
+    return render_template(
+        'manage_trek.html',
+        trek=trek,
+        bookings=bookings,
+        count =count
+    )
+    
+#Update profile
+
+@app.route('/profile', methods=['GET', 'POST'])
+def profile():
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    user = User.query.get_or_404(session['user_id'])
+
+    if request.method == 'POST':
+
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+
+        existing_user = User.query.filter(
+            User.username == username,
+            User.id != user.id
+        ).first()
+
+        if existing_user:
+            flash('Username already exists.', 'danger')
+            return redirect(request.url)
+
+        existing_email = User.query.filter(
+            User.email == email,
+            User.id != user.id
+        ).first()
+
+        if existing_email:
+            flash('Email already exists.', 'danger')
+            return redirect(request.url)
+
+        user.username = username
+        user.email = email
+
+        if password:
+            user.password = password
+
+        db.session.commit()
+
+        flash('Profile updated successfully.', 'success')
+
+        if session.get('role') == 'staff':
+            return redirect('/staff_dashboard')
+
+        elif session.get('role') == 'admin':
+            return redirect('/admin_dashboard')
+
+        else:
+            return redirect('/dashboard')
+
+    return render_template(
+        'profile.html',
+        user=user
+    )

@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container mt-5">
+
+    <!-- Trek management -->
+    <div class="card shadow">
+
+        <div class="card-header">
+            <h3>Manage Trek</h3>
+        </div>
+
+        <div class="card-body">
+
+            <h4>{{ trek.name }} ({{ trek.available_slot }})</h4>
+
+            <!-- Trek update form -->
+            <form method="POST">
+
+                <div class="mb-3">
+                    <label>Available Slots</label>
+
+                    <input type="number"
+                           name="available_slots"
+                           class="form-control"
+                           value="{{ trek.available_slots }}"
+                           required>
+                </div>
+
+                <div class="mb-3">
+                    <label>Status</label>
+
+                    <select name="status" class="form-select">
+
+                        <option value="Open" {% if trek.status=="Open" %}selected{% endif %}>
+                            Open
+                        </option>
+
+                        <option value="Started" {% if trek.status=="Started" %}selected{% endif %}>
+                            Started
+                        </option>
+
+                        <option value="Completed" {% if trek.status=="Completed" %}selected{% endif %}>
+                            Completed
+                        </option>
+
+                    </select>
+                </div>
+
+                <button class="btn btn-success">
+                    Update Trek
+                </button>
+
+                <a href="/staff_dashboard" class="btn btn-secondary">
+                    Back
+                </a>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    <!-- Participant list -->
+    <div class="card mt-4">
+
+        <div class="card-header">
+            Participants ({{ count }})
+        </div>
+
+        <table class="table">
+
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>User ID</th>
+                    <th>Booking Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% if bookings %}
+                    {% for booking in bookings %}
+                    <tr>
+
+                        <td>{{ booking.id }}</td>
+                        <td>{{ booking.user_id }}</td>
+                        <td>{{ booking.booking_date }}</td>
+                        <td>{{ booking.status }}</td>
+
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center">
+                            No Participants
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}

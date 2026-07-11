@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% set sidebar = True %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <h3>My Dashboard</h3>
+
+    <!-- Dashboard summary -->
+    <div class="row">
+
+        <div class="col-md-4">
+            <div class="card p-3 text-center">
+                <h6>Assigned Treks</h6>
+                <h2>{{ total_treks }}</h2>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card p-3 text-center">
+                <h6>Total Participants</h6>
+                <h2>{{ total_participants }}</h2>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card p-3 text-center">
+                <h6>Open Treks</h6>
+                <h2>{{ open_treks }}</h2>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Assigned trek list -->
+    <div class="card mt-4">
+
+        <div class="card-header">
+            My Assigned Treks
+        </div>
+
+        <table class="table table-bordered">
+
+            <thead>
+                <tr>
+                    <th>Trek</th>
+                    <th>Location</th>
+                    <th>Difficulty</th>
+                    <th>Slots</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% if treks %}
+                    {% for trek in treks %}
+                    <tr>
+
+                        <td>{{ trek.name }}</td>
+                        <td>{{ trek.location }}</td>
+                        <td>{{ trek.difficulty }}</td>
+                        <td>{{ trek.available_slot }}</td>
+                        <td>{{ trek.status }}</td>
+
+                        <td>
+                            <a href="/staff/manage_trek/{{ trek.id }}" class="btn btn-primary btn-sm">
+                                Manage
+                            </a>
+                        </td>
+
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center">
+                            No Trek Assigned
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}

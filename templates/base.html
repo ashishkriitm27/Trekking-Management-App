@@ -17,14 +17,14 @@
     <!-- Top navigation bar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="/dashboard">
+            <a class="navbar-brand fw-bold" href="/dashboard" target ="_blank">
                 Trek Management System
             </a>
 
             {% if session.get('user_id') %}
             <div class="ms-auto d-flex align-items-center">
                 <span class="text-white me-3">
-                    Welcome, <strong>{{ session.get('username') }}</strong>
+                    Welcome, <strong><a href="/profile" class="text-white text-decoration-none">{{ session.get('username') }}</a></strong>
                 </span>
 
                 <a href="/dashboard" class="btn btn-dark btn-sm mx-2">
