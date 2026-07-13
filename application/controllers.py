@@ -2,6 +2,7 @@ from flask import render_template, redirect, request, session, url_for, flash
 from flask import current_app as app
 from .models import *
 from .database import db
+from sqlalchemy import or_
 
 from datetime import datetime
 # Home Route
@@ -142,8 +143,8 @@ def admin_dashbaord():
     total_staff = User.query.filter_by(type = 'staff').count()
     pending_staff = User.query.filter_by(type = 'staff', is_approved =False).count()
     total_treks = Trek.query.count()
-    total_bookings = Booking.query.count()
-    recent_bookings = Booking.query.order_by(Booking.id.desc()).limit(7).all()
+    total_bookings =Booking.query.filter_by(status='Booked').count()
+    recent_bookings = Booking.query.order_by(Booking.id.desc()).limit(5).all()
     
     #Chart
     
@@ -179,30 +180,33 @@ def admin_dashbaord():
 
 @app.route('/admin/users')
 def admin_users():
+
     if 'user_id' not in session:
         return redirect('/login')
+
     if session.get('role') != 'admin':
         return redirect('/login')
-    
-    search = request.args.get('search','').strip()
-    
+
+    search = request.args.get('search', '').strip()
+
+    query = User.query.filter(User.type == 'user')
+
     if search:
-        users = User.query.filter(User.type =='user',
-                                  db.or_(
-                                      User.username.ilike(f'${search}'),
-                                      User.email.ilike(f'${search}'),
-                                  )).all()
-    else:
-        users = User.query.filter_by(
-            type='user'
-        ).all()
-    
+        query = query.filter(
+            or_(
+                User.username.ilike(f'%{search}%'),
+                User.email.ilike(f'%{search}%')
+            )
+        )
+
+    users = query.all()
+
     return render_template(
         'admin_users.html',
         users=users,
         search=search
     )
-
+    
 #Manage Staff
 
 @app.route('/admin/staff')
@@ -305,6 +309,24 @@ def approve_staff(id):
     staff.is_approved = True
     db.session.commit()
     flash('Staff approved successfully.', 'success')
+    return redirect('/admin/pending_staff')
+
+@app.route('/admin/reject_staff/<int:id>')
+def reject_staff(id):
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if session.get('role') != 'admin':
+        return redirect('/login')
+
+    staff = User.query.get_or_404(id)
+
+    db.session.delete(staff)
+    db.session.commit()
+
+    flash('Staff request rejected successfully.', 'success')
+
     return redirect('/admin/pending_staff')
 
 #Blacklist and Unblack
@@ -509,6 +531,7 @@ def edit_trek(id):
         trek.location = request.form['location']
         trek.difficulty = request.form['difficulty']
         trek.duration = int(request.form['duration'])
+        trek.status = request.form['status']
         trek.available_slot = int(request.form['available_slot'])
         staff_id = request.form.get('staff_id',)
         trek.staff_id = int(staff_id) if staff_id else None
@@ -532,7 +555,7 @@ def delete_trek(id):
     trek = Trek.query.get_or_404(id)
     booking = Booking.query.filter_by(trek_id=id).first()
     if booking:
-        flash('Cannot delete trek: existing bookings found.', 'warning')
+        flash('This trek cannot be deleted because booking history exists. Change its status instead.','warning')
         return redirect('/admin/treks')
     db.session.delete(trek)
     db.session.commit()
@@ -634,11 +657,13 @@ def manage_trek(trek_id):
         return redirect('/staff_dashboard')
 
     bookings = Booking.query.filter_by(
-        trek_id=trek.id
+    trek_id=trek.id,
+    status='Booked'
     ).all()
 
     count = Booking.query.filter_by(
-        trek_id=trek.id
+    trek_id=trek.id,
+    status='Booked'
     ).count()
 
     return render_template(
@@ -715,7 +740,9 @@ def user_dashboard():
     if session.get('role') != 'user':
         return redirect('/login')
 
+
     # Search & Filters
+
     search = request.args.get('search', '').strip()
     difficulty = request.args.get('difficulty', '').strip()
     location = request.args.get('location', '').strip()
@@ -739,13 +766,19 @@ def user_dashboard():
 
     treks = query.all()
 
-    # Dashboard Statistics
+ 
+    # Dashboard Cards
+ 
+
+    # Total Booking History
     total_bookings = Booking.query.filter_by(
         user_id=session['user_id']
     ).count()
 
+    # Only Active Upcoming Bookings
     upcoming_treks = Booking.query.join(Trek).filter(
         Booking.user_id == session['user_id'],
+        Booking.status == 'Booked',
         Trek.status == 'Open'
     ).count()
 
@@ -753,8 +786,9 @@ def user_dashboard():
         status='Open'
     ).count()
 
-    # Charts
-    #  Pie Chart 
+ 
+    # Pie Chart
+    
 
     booked_count = Booking.query.filter_by(
         user_id=session['user_id'],
@@ -783,35 +817,43 @@ def user_dashboard():
         cancelled_count
     ]
 
-    # Bar Chart 
+    # Participants Chart
+
+
     trek_labels = []
     participant_data = []
+    added_treks = set()
 
     my_bookings = Booking.query.filter_by(
-        user_id=session['user_id']
+        user_id=session['user_id'],
+        status='Booked'
     ).all()
 
     for booking in my_bookings:
 
         trek = Trek.query.get(booking.trek_id)
 
-        if trek:
+        if trek and trek.id not in added_treks:
 
             participant_count = Booking.query.filter_by(
-                trek_id=trek.id
+                trek_id=trek.id,
+                status='Booked'
             ).count()
 
             trek_labels.append(trek.name)
             participant_data.append(participant_count)
 
+            added_treks.add(trek.id)
 
     return render_template(
         'user_dashboard.html',
         username=session.get('username'),
         treks=treks,
+
         total_bookings=total_bookings,
         upcoming_treks=upcoming_treks,
         available_treks=available_treks,
+
         search=search,
         difficulty=difficulty,
         location=location,
@@ -821,7 +863,117 @@ def user_dashboard():
 
         trek_labels=trek_labels,
         participant_data=participant_data
-    )    
+    )
+    if difficulty:
+        query = query.filter(
+            Trek.difficulty == difficulty
+        )
+
+    if location:
+        query = query.filter(
+            Trek.location.ilike(f'%{location}%')
+        )
+
+    treks = query.all()
+
+
+    # Dashboard Cards
+
+
+    # Total Booking History
+    total_bookings = Booking.query.filter_by(
+        user_id=session['user_id']
+    ).count()
+
+    # Only Active Upcoming Bookings
+    upcoming_treks = Booking.query.join(Trek).filter(
+        Booking.user_id == session['user_id'],
+        Booking.status == 'Booked',
+        Trek.status == 'Open'
+    ).count()
+
+    available_treks = Trek.query.filter_by(
+        status='Open'
+    ).count()
+
+    # Pie Chart
+
+
+    booked_count = Booking.query.filter_by(
+        user_id=session['user_id'],
+        status='Booked'
+    ).count()
+
+    completed_count = Booking.query.filter_by(
+        user_id=session['user_id'],
+        status='Completed'
+    ).count()
+
+    cancelled_count = Booking.query.filter_by(
+        user_id=session['user_id'],
+        status='Cancelled'
+    ).count()
+
+    status_labels = [
+        'Booked',
+        'Completed',
+        'Cancelled'
+    ]
+
+    status_data = [
+        booked_count,
+        completed_count,
+        cancelled_count
+    ]
+
+    # Participants Chart
+
+
+    trek_labels = []
+    participant_data = []
+    added_treks = set()
+
+    my_bookings = Booking.query.filter_by(
+        user_id=session['user_id'],
+        status='Booked'
+    ).all()
+
+    for booking in my_bookings:
+
+        trek = Trek.query.get(booking.trek_id)
+
+        if trek and trek.id not in added_treks:
+
+            participant_count = Booking.query.filter_by(
+                trek_id=trek.id,
+                status='Booked'
+            ).count()
+
+            trek_labels.append(trek.name)
+            participant_data.append(participant_count)
+
+            added_treks.add(trek.id)
+
+    return render_template(
+        'user_dashboard.html',
+        username=session.get('username'),
+        treks=treks,
+
+        total_bookings=total_bookings,
+        upcoming_treks=upcoming_treks,
+        available_treks=available_treks,
+
+        search=search,
+        difficulty=difficulty,
+        location=location,
+
+        status_labels=status_labels,
+        status_data=status_data,
+
+        trek_labels=trek_labels,
+        participant_data=participant_data
+    )
+
 #Book trek
 
 @app.route('/book_trek/<int:trek_id>')
@@ -890,22 +1042,40 @@ def book_trek(trek_id):
 
     return redirect('/my_bookings')
 
-
+# User my booking
 @app.route('/my_bookings')
 def my_bookings():
 
     if 'user_id' not in session:
         return redirect('/login')
 
-    bookings = Booking.query.filter_by(
-        user_id=session['user_id']
+    booking_status = request.args.get('booking_status', '').strip()
+    trek_status = request.args.get('trek_status', '').strip()
+
+    query = Booking.query.join(Trek).filter(
+        Booking.user_id == session['user_id']
+    )
+
+    if booking_status:
+        query = query.filter(
+            Booking.status == booking_status
+        )
+
+    if trek_status:
+        query = query.filter(
+            Trek.status == trek_status
+        )
+
+    bookings = query.order_by(
+        Booking.id.desc()
     ).all()
 
     return render_template(
         'my_bookings.html',
-        bookings=bookings
+        bookings=bookings,
+        booking_status=booking_status,
+        trek_status=trek_status
     )
-    
 @app.route('/trek/<int:trek_id>')
 def trek_details(trek_id):
 

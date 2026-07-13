@@ -113,6 +113,9 @@
                                     <span class="badge bg-primary">
                                         Started
                                     </span>
+                                {% elif trek.status == 'Closed' %}
+                                    <span class="badge bg-black text-white">
+                                        Closed
                                 {% else %}
                                     <span class="badge bg-secondary">
                                         Completed

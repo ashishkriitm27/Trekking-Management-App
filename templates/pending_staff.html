@@ -26,27 +26,30 @@
 
         <tbody>
             {% if staffs %}
-                {% for staff in staffs %}
-                <tr>
+            {% for staff in staffs %}
+            <tr>
 
-                    <td>{{ staff.id }}</td>
-                    <td>{{ staff.username }}</td>
-                    <td>{{ staff.email }}</td>
+                <td>{{ staff.id }}</td>
+                <td>{{ staff.username }}</td>
+                <td>{{ staff.email }}</td>
 
-                    <td>
-                        <a href="/admin/approve_staff/{{ staff.id }}" class="btn btn-success btn-sm">
-                            Approve
-                        </a>
-                    </td>
+                <td>
+                    <a href="/admin/approve_staff/{{ staff.id }}" class="btn btn-success btn-sm">
+                        Approve
+                    </a>
+                    <a href="/admin/reject_staff/{{ staff.id }}" class="btn btn-danger btn-sm">
+                        Reject
+                    </a>
+                </td>
 
-                </tr>
-                {% endfor %}
+            </tr>
+            {% endfor %}
             {% else %}
-                <tr>
-                    <td colspan="4" class="text-center">
-                        No Pending Staff Requests
-                    </td>
-                </tr>
+            <tr>
+                <td colspan="4" class="text-center">
+                    No Pending Staff Requests
+                </td>
+            </tr>
             {% endif %}
         </tbody>
 
