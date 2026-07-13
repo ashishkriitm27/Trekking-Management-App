@@ -145,15 +145,34 @@ def admin_dashbaord():
     total_bookings = Booking.query.count()
     recent_bookings = Booking.query.order_by(Booking.id.desc()).limit(7).all()
     
+    #Chart
+    
+    chart_labels = [
+    'Treks',
+    'Users',
+    'Staff',
+    'Bookings'
+]
+
+    chart_data = [
+        total_treks,
+        total_users,
+        total_staff,
+        total_bookings
+    ]
+    
     return render_template(
-        'admin_dashboard.html',
-        username = session.get('username'),
-        total_users=total_users,
-        total_staff=total_staff,
-        pending_staff=pending_staff,
-        total_treks=total_treks,
-        total_bookings=total_bookings,
-        recent_bookings=recent_bookings
+    'admin_dashboard.html',
+    username=session.get('username'),
+    total_users=total_users,
+    total_staff=total_staff,
+    pending_staff=pending_staff,
+    total_treks=total_treks,
+    total_bookings=total_bookings,
+    recent_bookings=recent_bookings,
+
+    chart_labels=chart_labels,
+    chart_data=chart_data
     )
     
 #Manage User
@@ -522,7 +541,6 @@ def delete_trek(id):
 
 # Staff Routes
 
-
 @app.route('/staff_dashboard')
 def staff_dashboard():
 
@@ -547,14 +565,31 @@ def staff_dashboard():
         Trek.staff_id == session['user_id']
     ).count()
 
+    #  Chart Data
+
+    chart_labels = []
+    chart_data = []
+
+    for trek in treks:
+
+        participant_count = Booking.query.filter_by(
+            trek_id=trek.id
+        ).count()
+
+        chart_labels.append(trek.name)
+        chart_data.append(participant_count)
+
+
     return render_template(
         'staff_dashboard.html',
         treks=treks,
         total_treks=total_treks,
         open_treks=open_treks,
-        total_participants=total_participants
-    )
+        total_participants=total_participants,
 
+        chart_labels=chart_labels,
+        chart_data=chart_data
+    )
 # Staff manage treks
 
 @app.route('/staff/manage_trek/<int:trek_id>', methods=['GET', 'POST'])
@@ -718,6 +753,58 @@ def user_dashboard():
         status='Open'
     ).count()
 
+    # Charts
+    #  Pie Chart 
+
+    booked_count = Booking.query.filter_by(
+        user_id=session['user_id'],
+        status='Booked'
+    ).count()
+
+    completed_count = Booking.query.filter_by(
+        user_id=session['user_id'],
+        status='Completed'
+    ).count()
+
+    cancelled_count = Booking.query.filter_by(
+        user_id=session['user_id'],
+        status='Cancelled'
+    ).count()
+
+    status_labels = [
+        'Booked',
+        'Completed',
+        'Cancelled'
+    ]
+
+    status_data = [
+        booked_count,
+        completed_count,
+        cancelled_count
+    ]
+
+    # Bar Chart 
+    trek_labels = []
+    participant_data = []
+
+    my_bookings = Booking.query.filter_by(
+        user_id=session['user_id']
+    ).all()
+
+    for booking in my_bookings:
+
+        trek = Trek.query.get(booking.trek_id)
+
+        if trek:
+
+            participant_count = Booking.query.filter_by(
+                trek_id=trek.id
+            ).count()
+
+            trek_labels.append(trek.name)
+            participant_data.append(participant_count)
+
+
     return render_template(
         'user_dashboard.html',
         username=session.get('username'),
@@ -727,10 +814,14 @@ def user_dashboard():
         available_treks=available_treks,
         search=search,
         difficulty=difficulty,
-        location=location
-    )
+        location=location,
 
-    
+        status_labels=status_labels,
+        status_data=status_data,
+
+        trek_labels=trek_labels,
+        participant_data=participant_data
+    )    
 #Book trek
 
 @app.route('/book_trek/<int:trek_id>')

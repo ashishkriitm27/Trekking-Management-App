@@ -55,29 +55,29 @@
 
             <tbody>
                 {% if treks %}
-                    {% for trek in treks %}
-                    <tr>
+                {% for trek in treks %}
+                <tr>
 
-                        <td>{{ trek.name }}</td>
-                        <td>{{ trek.location }}</td>
-                        <td>{{ trek.difficulty }}</td>
-                        <td>{{ trek.available_slot }}</td>
-                        <td>{{ trek.status }}</td>
+                    <td>{{ trek.name }}</td>
+                    <td>{{ trek.location }}</td>
+                    <td>{{ trek.difficulty }}</td>
+                    <td>{{ trek.available_slot }}</td>
+                    <td>{{ trek.status }}</td>
 
-                        <td>
-                            <a href="/staff/manage_trek/{{ trek.id }}" class="btn btn-primary btn-sm">
-                                Manage
-                            </a>
-                        </td>
+                    <td>
+                        <a href="/staff/manage_trek/{{ trek.id }}" class="btn btn-primary btn-sm">
+                            Manage
+                        </a>
+                    </td>
 
-                    </tr>
-                    {% endfor %}
+                </tr>
+                {% endfor %}
                 {% else %}
-                    <tr>
-                        <td colspan="6" class="text-center">
-                            No Trek Assigned
-                        </td>
-                    </tr>
+                <tr>
+                    <td colspan="6" class="text-center">
+                        No Trek Assigned
+                    </td>
+                </tr>
                 {% endif %}
             </tbody>
 
@@ -86,5 +86,123 @@
     </div>
 
 </div>
+
+<!-- Participants Chart -->
+
+<div class="card mt-4">
+
+    <div class="card-header">
+        Participants per Assigned Trek
+    </div>
+
+    <div class="card-body">
+
+        <div style="height:300px;">
+
+            <canvas id="participantChart"></canvas>
+
+        </div>
+
+    </div>
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+
+    const chartLabels = {{ chart_labels | tojson }};
+    const chartData = {{ chart_data | tojson }};
+
+    const ctx = document.getElementById('participantChart');
+
+    new Chart(ctx, {
+
+        type: 'bar',
+
+        data: {
+
+            labels: chartLabels,
+
+            datasets: [{
+
+                label: 'Participants',
+
+                data: chartData,
+
+                backgroundColor: '#0d6efd',
+
+                borderColor: '#0d6efd',
+
+                borderWidth: 1
+
+            }]
+
+        },
+
+        options: {
+
+            responsive: true,
+
+            maintainAspectRatio: false,
+
+            plugins: {
+
+                legend: {
+
+                    display: false
+
+                },
+
+                title: {
+
+                    display: true,
+
+                    text: 'Participants per Assigned Trek'
+
+                }
+
+            },
+
+            scales: {
+
+                x: {
+
+                    title: {
+
+                        display: true,
+
+                        text: 'Assigned Treks'
+
+                    }
+
+                },
+
+                y: {
+
+                    beginAtZero: true,
+
+                    ticks: {
+
+                        precision: 0
+
+                    },
+
+                    title: {
+
+                        display: true,
+
+                        text: 'Number of Participants'
+
+                    }
+
+                }
+
+            }
+
+        }
+
+    });
+
+</script>
 
 {% endblock %}

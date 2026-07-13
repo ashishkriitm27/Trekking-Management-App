@@ -90,7 +90,24 @@
         </div>
     </div>
 </div>
+<!-- Charts -->
+<div class="card mt-4">
 
+    <div class="card-header">
+        System Overview
+    </div>
+
+    <div class="card-body">
+
+        <div style="height:300px;">
+
+            <canvas id="systemChart"></canvas>
+
+        </div>
+
+    </div>
+
+</div>
 <!-- Latest booking records -->
 <div class="card mt-4">
     <div class="card-header">
@@ -110,34 +127,123 @@
 
             <tbody>
                 {% if recent_bookings %}
-                    {% for booking in recent_bookings %}
-                    <tr>
-                        <td>{{ booking.id }}</td>
-                        <td>{{ booking.user.username }}</td>
-                        <td>{{ booking.trek.name }}</td>
-                        <td>
-                            {% if booking.status == 'Booked' %}
-                                <span class="badge bg-success">
-                                    {{ booking.status }}
-                                </span>
-                            {% else %}
-                                <span class="badge bg-secondary">
-                                    {{ booking.status }}
-                                </span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
+                {% for booking in recent_bookings %}
+                <tr>
+                    <td>{{ booking.id }}</td>
+                    <td>{{ booking.user.username }}</td>
+                    <td>{{ booking.trek.name }}</td>
+                    <td>
+                        {% if booking.status == 'Booked' %}
+                        <span class="badge bg-success">
+                            {{ booking.status }}
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary">
+                            {{ booking.status }}
+                        </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
                 {% else %}
-                    <tr>
-                        <td colspan="4" class="text-center">
-                            No Bookings Yet
-                        </td>
-                    </tr>
+                <tr>
+                    <td colspan="4" class="text-center">
+                        No Bookings Yet
+                    </td>
+                </tr>
                 {% endif %}
             </tbody>
         </table>
     </div>
 </div>
 
+<!-- Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+
+const chartLabels = {{ chart_labels | tojson }};
+const chartData = {{ chart_data | tojson }};
+
+const ctx = document.getElementById('systemChart');
+
+new Chart(ctx, {
+
+    type: 'bar',
+
+    data: {
+
+        labels: chartLabels,
+
+        datasets: [{
+
+            label: 'System Overview',
+
+            data: chartData,
+
+            backgroundColor: [
+                '#0d6efd',
+                '#198754',
+                '#ffc107',
+                '#dc3545'
+            ],
+
+            borderColor: [
+                '#0d6efd',
+                '#198754',
+                '#ffc107',
+                '#dc3545'
+            ],
+
+            borderWidth: 1
+
+        }]
+
+    },
+
+    options: {
+
+        responsive: true,
+
+        maintainAspectRatio: false,
+
+        plugins: {
+
+            legend: {
+
+                display: false
+
+            },
+
+            title: {
+
+                display: true,
+
+                text: 'System Overview'
+
+            }
+
+        },
+
+        scales: {
+
+            y: {
+
+                beginAtZero: true,
+
+                ticks: {
+
+                    precision: 0
+
+                }
+
+            }
+
+        }
+
+    }
+
+});
+
+</script>
 {% endblock %}
