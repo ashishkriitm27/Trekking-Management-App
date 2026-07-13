@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <h3>My Bookings</h3>
+
+    <div class="card mt-3">
+
+        <div class="card-header">
+            Booking History
+        </div>
+
+        <!-- Booking list -->
+        <table class="table table-bordered table-hover">
+
+            <thead>
+                <tr>
+                    <th>Booking ID</th>
+                    <th>Trek</th>
+                    <th>Location</th>
+                    <th>Booking Date</th>
+                    <th>Booking Status</th>
+                    <th>Trek Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% if bookings %}
+                    {% for booking in bookings %}
+                    <tr>
+
+                        <td>{{ booking.id }}</td>
+                        <td>{{ booking.trek.name }}</td>
+                        <td>{{ booking.trek.location }}</td>
+                        <td>{{ booking.booking_date }}</td>
+                        <td>{{ booking.status }}</td>
+                        <td>{{ booking.trek.status }}</td>
+
+                        <td>
+                            <a href="/booking/{{ booking.id }}" class="btn btn-primary btn-sm">
+                                View
+                            </a>
+
+                            {% if booking.status == 'Booked' %}
+                            <a href="/cancel_booking/{{ booking.id }}"
+                               class="btn btn-danger btn-sm"
+                               onclick="return confirm('Cancel this booking?')">
+                                Cancel
+                            </a>
+                            {% endif %}
+                        </td>
+
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center">
+                            No Bookings Found
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}

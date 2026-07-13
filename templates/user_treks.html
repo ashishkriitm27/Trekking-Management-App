@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container mt-5">
+
+    <h2 class="mb-4">Available Treks</h2>
+
+    <!-- Trek cards -->
+    <div class="row">
+
+        {% for trek in treks %}
+        <div class="col-md-4 mb-4">
+
+            <div class="card shadow">
+
+                <div class="card-body">
+
+                    <h4>{{ trek.name }}</h4>
+
+                    <p><b>Location:</b> {{ trek.location }}</p>
+                    <p><b>Difficulty:</b> {{ trek.difficulty }}</p>
+                    <p><b>Duration:</b> {{ trek.duration }} Days</p>
+                    <p><b>Available Slots:</b> {{ trek.available_slots }}</p>
+                    <p><b>Status:</b> {{ trek.status }}</p>
+
+                    <a href="/book_trek/{{ trek.id }}" class="btn btn-success">
+                        Book Trek
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+        {% endfor %}
+
+    </div>
+
+</div>
+
+{% endblock %}

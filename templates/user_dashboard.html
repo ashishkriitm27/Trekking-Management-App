@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% set sidebar = True %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <h3>Welcome {{ username }}</h3>
+
+    <!-- Dashboard summary -->
+    <div class="row mt-3">
+
+        <div class="col-md-4">
+            <div class="card text-center shadow">
+                <div class="card-body">
+                    <h6>My Bookings</h6>
+                    <h2>{{ total_bookings }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card text-center shadow">
+                <div class="card-body">
+                    <h6>Upcoming Treks</h6>
+                    <h2>{{ upcoming_treks }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card text-center shadow">
+                <div class="card-body">
+                    <h6>Available Treks</h6>
+                    <h2>{{ available_treks }}</h2>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Search filters -->
+    <div class="card mt-4 mb-3">
+
+        <div class="card-body">
+
+            <form method="GET" action="/user_dashboard">
+
+                <div class="row g-2">
+
+                    <div class="col-md-4">
+                        <input type="text"
+                               name="search"
+                               class="form-control"
+                               placeholder="Search Trek Name"
+                               value="{{ search }}">
+                    </div>
+
+                    <div class="col-md-3">
+                        <select name="difficulty" class="form-select">
+
+                            <option value="">
+                                All Difficulty
+                            </option>
+
+                            <option value="Easy" {% if difficulty=="Easy" %}selected{% endif %}>
+                                Easy
+                            </option>
+
+                            <option value="Moderate" {% if difficulty=="Moderate" %}selected{% endif %}>
+                                Moderate
+                            </option>
+
+                            <option value="Hard" {% if difficulty=="Hard" %}selected{% endif %}>
+                                Hard
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <input type="text"
+                               name="location"
+                               class="form-control"
+                               placeholder="Location"
+                               value="{{ location }}">
+                    </div>
+
+                    <div class="col-md-1">
+                        <button class="btn btn-primary w-100">
+                            Search
+                        </button>
+                    </div>
+
+                    <div class="col-md-1">
+                        <a href="/user_dashboard" class="btn btn-secondary w-100">
+                            Clear
+                        </a>
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    <!-- Available treks -->
+    <div class="card">
+
+        <div class="card-header">
+            Available Treks
+        </div>
+
+        <table class="table table-bordered table-hover">
+
+            <thead>
+                <tr>
+                    <th>Trek</th>
+                    <th>Location</th>
+                    <th>Difficulty</th>
+                    <th>Duration</th>
+                    <th>Slots</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% if treks %}
+                    {% for trek in treks %}
+                    <tr>
+
+                        <td>{{ trek.name }}</td>
+                        <td>{{ trek.location }}</td>
+                        <td>{{ trek.difficulty }}</td>
+                        <td>{{ trek.duration }} Days</td>
+                        <td>{{ trek.available_slot }}</td>
+
+                        <td>
+                            <a href="/trek/{{ trek.id }}" class="btn btn-primary">
+                                View Details
+                            </a>
+                        </td>
+
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center">
+                            No Trek Found
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}
