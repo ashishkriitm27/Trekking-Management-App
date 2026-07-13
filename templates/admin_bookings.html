@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <h3>Booking Records</h3>
+
+    <div class="card mt-3">
+
+        <div class="card-header">
+            All Booking History
+        </div>
+
+        <table class="table table-bordered table-hover">
+
+            <thead>
+
+                <tr>
+
+                    <th>Booking ID</th>
+                    <th>User</th>
+                    <th>Trek</th>
+                    <th>Location</th>
+                    <th>Booking Date</th>
+                    <th>Booking Status</th>
+                    <th>Trek Status</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                {% if bookings %}
+
+                    {% for booking in bookings %}
+
+                    <tr>
+
+                        <td>{{ booking.id }}</td>
+
+                        <td>{{ booking.user.username }}</td>
+
+                        <td>{{ booking.trek.name }}</td>
+
+                        <td>{{ booking.trek.location }}</td>
+
+                        <td>{{ booking.booking_date }}</td>
+
+                        <td>
+
+                            {% if booking.status == 'Booked' %}
+                                <span class="badge bg-primary">
+                                    {{ booking.status }}
+                                </span>
+
+                            {% elif booking.status == 'Completed' %}
+                                <span class="badge bg-success">
+                                    {{ booking.status }}
+                                </span>
+
+                            {% elif booking.status == 'Cancelled' %}
+                                <span class="badge bg-danger">
+                                    {{ booking.status }}
+                                </span>
+
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    {{ booking.status }}
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+
+                            {% if booking.trek.status == 'Open' %}
+                                <span class="badge bg-info">
+                                    {{ booking.trek.status }}
+                                </span>
+
+                            {% elif booking.trek.status == 'Started' %}
+                                <span class="badge bg-warning text-dark">
+                                    {{ booking.trek.status }}
+                                </span>
+
+                            {% elif booking.trek.status == 'Completed' %}
+                                <span class="badge bg-success">
+                                    {{ booking.trek.status }}
+                                </span>
+
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    {{ booking.trek.status }}
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                {% else %}
+
+                    <tr>
+
+                        <td colspan="7" class="text-center">
+
+                            No Booking Records Found
+
+                        </td>
+
+                    </tr>
+
+                {% endif %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -555,7 +555,8 @@ def staff_dashboard():
         total_participants=total_participants
     )
 
-#Staff manage treaks
+# Staff manage treks
+
 @app.route('/staff/manage_trek/<int:trek_id>', methods=['GET', 'POST'])
 def manage_trek(trek_id):
 
@@ -581,21 +582,36 @@ def manage_trek(trek_id):
         trek.available_slot = new_slot
         trek.status = request.form['status']
 
+        # If trek is completed, mark all bookings as completed
+        if trek.status == 'Completed':
+
+            bookings = Booking.query.filter_by(
+                trek_id=trek.id,
+                status='Booked'
+            ).all()
+
+            for booking in bookings:
+                booking.status = 'Completed'
+
         db.session.commit()
 
         flash('Trek details updated.', 'success')
         return redirect('/staff_dashboard')
 
-    bookings = Booking.query.filter_by(trek_id=trek.id).all()
-    count = Booking.query.filter_by(trek_id=trek.id).count()
+    bookings = Booking.query.filter_by(
+        trek_id=trek.id
+    ).all()
+
+    count = Booking.query.filter_by(
+        trek_id=trek.id
+    ).count()
 
     return render_template(
         'manage_trek.html',
         trek=trek,
         bookings=bookings,
-        count =count
-    )
-    
+        count=count
+    )    
 #Update profile
 
 @app.route('/profile', methods=['GET', 'POST'])
@@ -872,3 +888,24 @@ def cancel_booking(booking_id):
     )
 
     return redirect('/my_bookings')
+
+
+# ---------------- ADMIN BOOKING HISTORY ---------------- #
+
+@app.route('/admin/bookings')
+def admin_bookings():
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if session.get('role') != 'admin':
+        return redirect('/login')
+
+    bookings = Booking.query.order_by(
+        Booking.booking_date.desc()
+    ).all()
+
+    return render_template(
+        'admin_bookings.html',
+        bookings=bookings
+    )
