@@ -1034,7 +1034,6 @@ def user_dashboard():
     )
 
 #Book trek
-
 @app.route('/book_trek/<int:trek_id>')
 def book_trek(trek_id):
 
@@ -1085,12 +1084,22 @@ def book_trek(trek_id):
     new_booking = Booking(
         user_id=user.id,
         trek_id=trek.id,
-        booking_date=datetime.today().date()
+        booking_date=datetime.today().date(),
+        status='Booked'
     )
 
     db.session.add(new_booking)
 
-    trek.available_slot -= 1
+    # Save booking first
+    db.session.flush()
+
+    # Recalculate available slots
+    booked_count = Booking.query.filter_by(
+        trek_id=trek.id,
+        status='Booked'
+    ).count()
+
+    trek.available_slot = trek.total_slot - booked_count
 
     db.session.commit()
 
@@ -1100,6 +1109,7 @@ def book_trek(trek_id):
     )
 
     return redirect('/my_bookings')
+
 
 # User my booking
 @app.route('/my_bookings')
@@ -1175,7 +1185,6 @@ def booking_details(booking_id):
         'booking_details.html',
         booking=booking
     )
-    
 @app.route('/cancel_booking/<int:booking_id>')
 def cancel_booking(booking_id):
 
@@ -1197,9 +1206,20 @@ def cancel_booking(booking_id):
         )
         return redirect('/my_bookings')
 
+    trek = booking.trek
+
     booking.status = 'Cancelled'
 
-    booking.trek.available_slot += 1
+    # Update booking status first
+    db.session.flush()
+
+    # Recalculate available slots
+    booked_count = Booking.query.filter_by(
+        trek_id=trek.id,
+        status='Booked'
+    ).count()
+
+    trek.available_slot = trek.total_slot - booked_count
 
     db.session.commit()
 
@@ -1209,7 +1229,6 @@ def cancel_booking(booking_id):
     )
 
     return redirect('/my_bookings')
-
 
 # ---------------- ADMIN BOOKING HISTORY ---------------- #
 
