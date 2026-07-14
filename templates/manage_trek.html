@@ -4,7 +4,6 @@
 
 <div class="container mt-5">
 
-    <!-- Trek management -->
     <div class="card shadow">
 
         <div class="card-header">
@@ -13,46 +12,91 @@
 
         <div class="card-body">
 
-            <h4>{{ trek.name }} ({{ trek.available_slot }})</h4>
+            <h4>{{ trek.name }}</h4>
 
-            <!-- Trek update form -->
+            <div class="row mb-4">
+
+                <div class="col-md-4">
+                    <div class="alert alert-primary text-center">
+                        <strong>Total Slots</strong><br>
+                        {{ trek.total_slot }}
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="alert alert-success text-center">
+                        <strong>Booked Participants</strong><br>
+                        {{ count }}
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="alert alert-warning text-center">
+                        <strong>Available Slots</strong><br>
+                        {{ trek.available_slot }}
+                    </div>
+                </div>
+
+            </div>
+
             <form method="POST">
 
                 <div class="mb-3">
+
                     <label>Available Slots</label>
 
-                    <input type="number"
-                           name="available_slots"
-                           class="form-control"
-                           value="{{ trek.available_slots }}"
-                           required>
+                    <input
+                        type="number"
+                        name="available_slots"
+                        class="form-control"
+                        value="{{ trek.available_slot }}"
+                        min="{{ count }}"
+                        max="{{ trek.total_slot }}"
+                        required>
+
+                    <small class="text-muted">
+
+                        Minimum : {{ count }}
+                        &nbsp;&nbsp;|&nbsp;&nbsp;
+                        Maximum : {{ trek.total_slot }}
+
+                    </small>
+
                 </div>
 
                 <div class="mb-3">
+
                     <label>Status</label>
 
-                    <select name="status" class="form-select">
+                    <select
+                        name="status"
+                        class="form-select">
 
-                        <option value="Open" {% if trek.status=="Open" %}selected{% endif %}>
+                        <option value="Open"
+                            {% if trek.status=="Open" %}selected{% endif %}>
                             Open
                         </option>
 
-                        <option value="Started" {% if trek.status=="Started" %}selected{% endif %}>
+                        <option value="Started"
+                            {% if trek.status=="Started" %}selected{% endif %}>
                             Started
                         </option>
 
-                        <option value="Completed" {% if trek.status=="Completed" %}selected{% endif %}>
+                        <option value="Completed"
+                            {% if trek.status=="Completed" %}selected{% endif %}>
                             Completed
                         </option>
 
                     </select>
+
                 </div>
 
                 <button class="btn btn-success">
                     Update Trek
                 </button>
 
-                <a href="/staff_dashboard" class="btn btn-secondary">
+                <a href="/staff_dashboard"
+                   class="btn btn-secondary">
                     Back
                 </a>
 
@@ -62,47 +106,75 @@
 
     </div>
 
-    <!-- Participant list -->
+
     <div class="card mt-4">
 
         <div class="card-header">
             Participants ({{ count }})
         </div>
 
-        <table class="table">
+        <table class="table table-bordered table-hover">
 
             <thead>
+
                 <tr>
+
                     <th>ID</th>
                     <th>User ID</th>
                     <th>User Name</th>
-                    <th>User Email</th>
+                    <th>Email</th>
                     <th>Booking Date</th>
                     <th>Status</th>
+
                 </tr>
+
             </thead>
 
             <tbody>
-                {% if bookings %}
-                    {% for booking in bookings %}
-                    <tr>
 
-                        <td>{{ booking.id }}</td>
-                        <td>{{ booking.user_id }}</td>
-                        <td>{{ booking.user.username }}</td>
-                        <td>{{ booking.user.email }}</td>
-                        <td>{{ booking.booking_date }}</td>
-                        <td>{{ booking.status }}</td>
+            {% if bookings %}
 
-                    </tr>
-                    {% endfor %}
-                {% else %}
-                    <tr>
-                        <td colspan="4" class="text-center">
-                            No Participants
-                        </td>
-                    </tr>
-                {% endif %}
+                {% for booking in bookings %}
+
+                <tr>
+
+                    <td>{{ booking.id }}</td>
+                    <td>{{ booking.user_id }}</td>
+                    <td>{{ booking.user.username }}</td>
+                    <td>{{ booking.user.email }}</td>
+                    <td>{{ booking.booking_date }}</td>
+
+                    <td>
+
+                        {% if booking.status == "Booked" %}
+                            <span class="badge bg-primary">Booked</span>
+
+                        {% elif booking.status == "Completed" %}
+                            <span class="badge bg-success">Completed</span>
+
+                        {% elif booking.status == "Cancelled" %}
+                            <span class="badge bg-danger">Cancelled</span>
+
+                        {% endif %}
+
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            {% else %}
+
+                <tr>
+
+                    <td colspan="6" class="text-center">
+                        No Participants
+                    </td>
+
+                </tr>
+
+            {% endif %}
+
             </tbody>
 
         </table>

@@ -47,7 +47,7 @@
                     <th>Trek</th>
                     <th>Location</th>
                     <th>Difficulty</th>
-                    <th>Slots</th>
+                    <th>Total / Available</th>
                     <th>Status</th>
                     <th>Action</th>
                 </tr>
@@ -61,7 +61,13 @@
                     <td>{{ trek.name }}</td>
                     <td>{{ trek.location }}</td>
                     <td>{{ trek.difficulty }}</td>
-                    <td>{{ trek.available_slot }}</td>
+                    <td>
+                        <strong>{{ trek.total_slot }}</strong>
+                        /
+                        <span class="text-success">
+                            {{ trek.available_slot }}
+                        </span>
+                    </td>
                     <td>{{ trek.status }}</td>
 
                     <td>

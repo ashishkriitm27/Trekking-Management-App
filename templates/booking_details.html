@@ -50,6 +50,7 @@
                     <td>{{ booking.trek.end_date }}</td>
                 </tr>
 
+
                 <tr>
                     <th>Booking Date</th>
                     <td>{{ booking.booking_date }}</td>
@@ -69,11 +70,10 @@
 
             <!-- Available actions -->
             {% if booking.status == 'Booked' %}
-                <a href="/cancel_booking/{{ booking.id }}"
-                   class="btn btn-danger"
-                   onclick="return confirm('Cancel this booking?')">
-                    Cancel Booking
-                </a>
+            <a href="/cancel_booking/{{ booking.id }}" class="btn btn-danger"
+                onclick="return confirm('Cancel this booking?')">
+                Cancel Booking
+            </a>
             {% endif %}
 
             <a href="/my_bookings" class="btn btn-secondary">

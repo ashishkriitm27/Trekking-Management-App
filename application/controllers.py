@@ -3,6 +3,7 @@ from flask import current_app as app
 from .models import *
 from .database import db
 from sqlalchemy import or_
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from datetime import datetime
 # Home Route
@@ -16,47 +17,52 @@ def home():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
 
-    # Process login form submission
     if request.method == 'POST':
 
-        # Get user credentials from the form
         email = request.form['email']
         password = request.form['password']
 
-        # Find user with matching email and password
-        user = User.query.filter_by(email=email, password=password).first()
+        # Find user by email only
+        user = User.query.filter_by(
+            email=email
+        ).first()
 
-        # Invalid credentials
-        if not user:
-            flash('Invalid email or password.', 'danger')
+        # Check email and hashed password
+        if not user or not check_password_hash(user.password, password):
+            flash(
+                'Invalid email or password.',
+                'danger'
+            )
             return redirect('/login')
 
-        # Prevent blacklisted users from logging in
         if user.is_blacklist:
-            flash('Your account has been blacklisted. Contact Admin.', 'danger')
+            flash(
+                'Your account has been blacklisted. Contact Admin.',
+                'danger'
+            )
             return redirect('/login')
 
-        # Staff members must be approved by the admin
         if user.type == 'staff' and not user.is_approved:
-            flash('Your account is awaiting admin approval.', 'warning')
+            flash(
+                'Your account is awaiting admin approval.',
+                'warning'
+            )
             return redirect('/login')
 
-        # Store logged-in user information in the session
         session['user_id'] = user.id
         session['username'] = user.username
         session['role'] = user.type
 
-        # Redirect users based on their role
         if user.type == 'admin':
             return redirect('/admin_dashboard')
+
         elif user.type == 'staff':
             return redirect('/staff_dashboard')
+
         else:
             return redirect('/user_dashboard')
 
     return render_template('login.html')
-
-
 #Log out
 @app.route('/logout')
 def logout():
@@ -65,50 +71,62 @@ def logout():
     return redirect('/login')
 
 # Registration Route
-
 @app.route('/register', methods=['GET', 'POST'])
 def register():
 
-    # Process registration form submission
     if request.method == 'POST':
 
-        # Get registration details from the form
         username = request.form['username']
         email = request.form['email']
+
         password = request.form['password']
-        confrim = request.form['confirm_password']
+        confirm = request.form['confirm_password']
+
         user_type = request.form.get('type', 'user')
 
-        # Check if passwords match
-        if password != confrim:
-            flash('Confirm password is not the same as password.', 'danger')
+        if password != confirm:
+            flash(
+                'Confirm password is not the same as password.',
+                'danger'
+            )
             return redirect('/register')
 
-        # Check if email already exists
-        existing_user = User.query.filter_by(email=email).first()
+        existing_user = User.query.filter_by(
+            email=email
+        ).first()
+
         if existing_user:
-            flash('Email is already registered.', 'danger')
+            flash(
+                'Email is already registered.',
+                'danger'
+            )
             return redirect('/register')
 
-        # Create a new user account
+        # Hash the password before storing
+        hashed_password = generate_password_hash(password)
+
         new_user = User(
             username=username,
             email=email,
-            password=password,
+            password=hashed_password,
             type=user_type
         )
 
-        # Save the new user to the database
         db.session.add(new_user)
         db.session.commit()
 
-        # Staff accounts require admin approval
         if user_type == 'staff':
-            flash('Registration successful! Please wait for admin approval.', 'success')
+            flash(
+                'Registration successful! Please wait for admin approval.',
+                'success'
+            )
             return redirect('/login')
 
-        # Regular users can log in immediately
-        flash('Registration successful! Please log in.', 'success')
+        flash(
+            'Registration successful! Please log in.',
+            'success'
+        )
+
         return redirect('/login')
 
     return render_template('register.html')
@@ -440,11 +458,9 @@ def admin_treks():
     )    
 
 # Add treak
-
 @app.route('/admin/add_trek', methods=['GET', 'POST'])
 def add_trek():
 
-    # Allow only logged-in admins
     if 'user_id' not in session:
         return redirect('/login')
 
@@ -453,12 +469,11 @@ def add_trek():
 
     if request.method == 'POST':
 
-        # Get form data
         name = request.form['name']
         location = request.form['location']
         difficulty = request.form['difficulty']
         duration = int(request.form['duration'])
-        slot = int(request.form['available_slot'])
+        total_slot = int(request.form['total_slot'])
 
         start = datetime.strptime(
             request.form['start_date'],
@@ -470,7 +485,6 @@ def add_trek():
             '%Y-%m-%d'
         ).date()
 
-        # Validate dates
         if end < start:
             flash(
                 'End Date cannot be before Start Date.',
@@ -478,23 +492,23 @@ def add_trek():
             )
             return redirect('/admin/add_trek')
 
-        # Validate available slots
-        if slot <= 0:
+        if total_slot <= 0:
             flash(
-                'Available Slots must be greater than 0.',
+                'Total Slots must be greater than 0.',
                 'danger'
             )
             return redirect('/admin/add_trek')
 
-        # Create a new trek
         trek = Trek(
             name=name,
             location=location,
             difficulty=difficulty,
             duration=duration,
-            available_slot=slot,
+            total_slot=total_slot,
+            available_slot=total_slot,
             start_date=start,
-            end_date=end
+            end_date=end,
+            status='Open'
         )
 
         db.session.add(trek)
@@ -509,7 +523,6 @@ def add_trek():
 
     return render_template('add_trek.html')
 
-
 #Edit trek
 @app.route('/admin/edit_trek/<int:id>', methods=['GET', 'POST'])
 def edit_trek(id):
@@ -521,25 +534,54 @@ def edit_trek(id):
         return redirect('/login')
 
     trek = Trek.query.get_or_404(id)
+
     staffs = User.query.filter_by(
         type='staff',
         is_approved=True,
         is_blacklist=False
     ).all()
+
     if request.method == 'POST':
+
         trek.name = request.form['name']
         trek.location = request.form['location']
         trek.difficulty = request.form['difficulty']
         trek.duration = int(request.form['duration'])
         trek.status = request.form['status']
-        trek.available_slot = int(request.form['available_slot'])
-        staff_id = request.form.get('staff_id',)
-        trek.staff_id = int(staff_id) if staff_id else None
-        db.session.commit()
-        flash('Trek updated successfully.', 'success')
-        return redirect('/admin/treks')
-    return render_template('edit_trek.html', trek=trek, staffs=staffs)
 
+        new_total_slot = int(request.form['total_slot'])
+
+        booked = Booking.query.filter_by(
+            trek_id=trek.id
+        ).count()
+
+        if new_total_slot < booked:
+            flash(
+                f'Total slots cannot be less than booked participants ({booked}).',
+                'danger'
+            )
+            return redirect(request.url)
+
+        trek.total_slot = new_total_slot
+        trek.available_slot = new_total_slot - booked
+
+        staff_id = request.form.get('staff_id')
+        trek.staff_id = int(staff_id) if staff_id else None
+
+        db.session.commit()
+
+        flash(
+            'Trek updated successfully.',
+            'success'
+        )
+
+        return redirect('/admin/treks')
+
+    return render_template(
+        'edit_trek.html',
+        trek=trek,
+        staffs=staffs
+    )
 #Delete treak
 
 
@@ -629,18 +671,35 @@ def manage_trek(trek_id):
         staff_id=session['user_id']
     ).first_or_404()
 
+    booked_count = Booking.query.filter_by(
+        trek_id=trek.id,
+        status='Booked'
+    ).count()
+
     if request.method == 'POST':
 
-        new_slot = int(request.form['available_slots'])
+        new_available = int(request.form['available_slots'])
 
-        if new_slot > trek.available_slot:
-            flash('You cannot increase slots assigned by Admin.', 'danger')
+        # Cannot exceed total slots assigned by Admin
+        if new_available > trek.total_slot:
+            flash(
+                f'Available slots cannot exceed Total Slots ({trek.total_slot}).',
+                'danger'
+            )
             return redirect(request.url)
 
-        trek.available_slot = new_slot
+        # Cannot be less than booked participants
+        if new_available < booked_count:
+            flash(
+                f'Available slots cannot be less than Booked Participants ({booked_count}).',
+                'danger'
+            )
+            return redirect(request.url)
+
+        trek.available_slot = new_available
         trek.status = request.form['status']
 
-        # If trek is completed, mark all bookings as completed
+        # If trek completed, complete all active bookings
         if trek.status == 'Completed':
 
             bookings = Booking.query.filter_by(
@@ -653,25 +712,25 @@ def manage_trek(trek_id):
 
         db.session.commit()
 
-        flash('Trek details updated.', 'success')
+        flash(
+            'Trek details updated successfully.',
+            'success'
+        )
+
         return redirect('/staff_dashboard')
 
     bookings = Booking.query.filter_by(
-    trek_id=trek.id,
-    status='Booked'
+        trek_id=trek.id,
+        status='Booked'
     ).all()
-
-    count = Booking.query.filter_by(
-    trek_id=trek.id,
-    status='Booked'
-    ).count()
 
     return render_template(
         'manage_trek.html',
         trek=trek,
         bookings=bookings,
-        count=count
-    )    
+        count=booked_count
+    )
+
 #Update profile
 
 @app.route('/profile', methods=['GET', 'POST'])
@@ -1116,6 +1175,7 @@ def booking_details(booking_id):
         'booking_details.html',
         booking=booking
     )
+    
 @app.route('/cancel_booking/<int:booking_id>')
 def cancel_booking(booking_id):
 
@@ -1169,4 +1229,48 @@ def admin_bookings():
     return render_template(
         'admin_bookings.html',
         bookings=bookings
+    )
+
+# ---------------- Admin Trek Details ---------------- #
+
+@app.route('/admin/trek/<int:trek_id>')
+def admin_trek_details(trek_id):
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if session.get('role') != 'admin':
+        return redirect('/login')
+
+    trek = Trek.query.get_or_404(trek_id)
+
+    bookings = Booking.query.filter_by(
+        trek_id=trek.id
+    ).all()
+
+    total_participants = len(bookings)
+
+    booked_count = Booking.query.filter_by(
+        trek_id=trek.id,
+        status='Booked'
+    ).count()
+
+    completed_count = Booking.query.filter_by(
+        trek_id=trek.id,
+        status='Completed'
+    ).count()
+
+    cancelled_count = Booking.query.filter_by(
+        trek_id=trek.id,
+        status='Cancelled'
+    ).count()
+
+    return render_template(
+        'admin_trek_details.html',
+        trek=trek,
+        bookings=bookings,
+        total_participants=total_participants,
+        booked_count=booked_count,
+        completed_count=completed_count,
+        cancelled_count=cancelled_count
     )

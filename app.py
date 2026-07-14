@@ -29,9 +29,9 @@ if __name__ == '__main__':
 
         if not admin:
             default_admin = User(
-                username='admin',
-                email='admin@example.com',
-                password='admin123',
+                username='Ashish (admin)',
+                email='ashish@admin.com',
+                password = generate_password_hash('123'),
                 type='admin'
             )
 

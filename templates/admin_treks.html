@@ -4,10 +4,10 @@
 
 {% block content %}
 
-<!-- Trek management page -->
 <div class="container mt-4">
 
     <div class="d-flex justify-content-between align-items-center mb-4">
+
         <h3 class="fw-bold">
             Manage Treks
         </h3>
@@ -15,42 +15,59 @@
         <a href="/admin/add_trek" class="btn btn-success">
             + Add Trek
         </a>
+
     </div>
 
-    <!-- Search treks -->
+
+    <!-- Search -->
+
     <div class="card mb-4">
+
         <div class="card-body">
 
             <form method="GET" action="/admin/treks">
+
                 <div class="row g-2">
 
                     <div class="col-md-10">
-                        <input type="text"
-                               name="search"
-                               class="form-control"
-                               placeholder="Search by Trek Name or Location..."
-                               value="{{ search }}">
+
+                        <input
+                            type="text"
+                            name="search"
+                            class="form-control"
+                            placeholder="Search by Trek Name or Location..."
+                            value="{{ search }}">
+
                     </div>
 
                     <div class="col-md-1">
+
                         <button class="btn btn-primary w-100">
                             Search
                         </button>
+
                     </div>
 
                     <div class="col-md-1">
-                        <a href="/admin/treks" class="btn btn-secondary w-100">
+
+                        <a href="/admin/treks"
+                           class="btn btn-secondary w-100">
                             Clear
                         </a>
+
                     </div>
 
                 </div>
+
             </form>
 
         </div>
+
     </div>
 
-    <!-- Trek list -->
+
+    <!-- Trek Table -->
+
     <div class="card">
 
         <div class="card-header">
@@ -58,107 +75,196 @@
         </div>
 
         <div class="table-responsive">
+
             <table class="table table-hover table-striped align-middle mb-0">
 
                 <thead>
+
                     <tr>
+
                         <th>ID</th>
+
                         <th>Name</th>
+
                         <th>Location</th>
+
                         <th>Difficulty</th>
-                        <th>Slots</th>
+
+                        <th>Total / Available</th>
+
                         <th>Status</th>
+
                         <th>Assigned Staff</th>
-                        <th width="170">Actions</th>
+
+                        <th width="220">
+                            Actions
+                        </th>
+
                     </tr>
+
                 </thead>
 
                 <tbody>
-                    {% if treks %}
-                        {% for trek in treks %}
-                        <tr>
 
-                            <td>{{ trek.id }}</td>
+                {% if treks %}
 
-                            <td>
-                                <strong>{{ trek.name }}</strong>
-                            </td>
+                    {% for trek in treks %}
 
-                            <td>{{ trek.location }}</td>
+                    <tr>
 
-                            <td>
-                                {% if trek.difficulty == 'Easy' %}
-                                    <span class="badge bg-success">
-                                        Easy
-                                    </span>
-                                {% elif trek.difficulty == 'Moderate' %}
-                                    <span class="badge bg-warning text-dark">
-                                        Moderate
-                                    </span>
-                                {% else %}
-                                    <span class="badge bg-danger">
-                                        Hard
-                                    </span>
-                                {% endif %}
-                            </td>
+                        <td>{{ trek.id }}</td>
 
-                            <td>{{ trek.available_slot }}</td>
+                        <td>
 
-                            <td>
-                                {% if trek.status == 'Open' %}
-                                    <span class="badge bg-success">
-                                        Open
-                                    </span>
-                                {% elif trek.status == 'Started' %}
-                                    <span class="badge bg-primary">
-                                        Started
-                                    </span>
-                                {% elif trek.status == 'Closed' %}
-                                    <span class="badge bg-black text-white">
-                                        Closed
-                                {% else %}
-                                    <span class="badge bg-secondary">
-                                        Completed
-                                    </span>
-                                {% endif %}
-                            </td>
+                            <strong>
+                                {{ trek.name }}
+                            </strong>
 
-                            <td>
-                                {% if trek.staff %}
-                                    <span class="badge bg-info text-dark">
-                                        {{ trek.staff.username }}
-                                    </span>
-                                {% else %}
-                                    <span class="badge bg-secondary">
-                                        Not Assigned
-                                    </span>
-                                {% endif %}
-                            </td>
+                        </td>
 
-                            <td>
-                                <a href="/admin/edit_trek/{{ trek.id }}" class="btn btn-warning btn-sm">
+                        <td>{{ trek.location }}</td>
+
+                        <td>
+
+                            {% if trek.difficulty == 'Easy' %}
+
+                                <span class="badge bg-success">
+                                    Easy
+                                </span>
+
+                            {% elif trek.difficulty == 'Moderate' %}
+
+                                <span class="badge bg-warning text-dark">
+                                    Moderate
+                                </span>
+
+                            {% else %}
+
+                                <span class="badge bg-danger">
+                                    Hard
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+
+                            <strong>
+                                {{ trek.total_slot }}
+                            </strong>
+
+                            /
+
+                            <span class="text-success">
+                                {{ trek.available_slot }}
+                            </span>
+
+                        </td>
+
+                        <td>
+
+                            {% if trek.status == 'Open' %}
+
+                                <span class="badge bg-success">
+                                    Open
+                                </span>
+
+                            {% elif trek.status == 'Started' %}
+
+                                <span class="badge bg-primary">
+                                    Started
+                                </span>
+
+                            {% elif trek.status == 'Closed' %}
+
+                                <span class="badge bg-dark">
+                                    Closed
+                                </span>
+
+                            {% else %}
+
+                                <span class="badge bg-secondary">
+                                    Completed
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+
+                            {% if trek.staff %}
+
+                                <span class="badge bg-info text-dark">
+                                    {{ trek.staff.username }}
+                                </span>
+
+                            {% else %}
+
+                                <span class="badge bg-secondary">
+                                    Not Assigned
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td class="text-nowrap">
+
+                            <div class="d-flex gap-2 flex-nowrap">
+
+                                <a
+                                    href="/admin/trek/{{ trek.id }}"
+                                    class="btn btn-primary btn-sm">
+
+                                    View
+
+                                </a>
+
+                                <a
+                                    href="/admin/edit_trek/{{ trek.id }}"
+                                    class="btn btn-warning btn-sm">
+
                                     Edit
+
                                 </a>
 
-                                <a href="/admin/delete_trek/{{ trek.id }}"
-                                   class="btn btn-danger btn-sm"
-                                   onclick="return confirm('Delete this trek?');">
+                                <a
+                                    href="/admin/delete_trek/{{ trek.id }}"
+                                    class="btn btn-danger btn-sm"
+                                    onclick="return confirm('Delete this trek?');">
+
                                     Delete
-                                </a>
-                            </td>
 
-                        </tr>
-                        {% endfor %}
-                    {% else %}
-                        <tr>
-                            <td colspan="8" class="text-center">
-                                No Trek Found
-                            </td>
-                        </tr>
-                    {% endif %}
+                                </a>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                {% else %}
+
+                    <tr>
+
+                        <td colspan="8" class="text-center">
+
+                            No Trek Found
+
+                        </td>
+
+                    </tr>
+
+                {% endif %}
+
                 </tbody>
 
             </table>
+
         </div>
 
     </div>
