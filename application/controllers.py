@@ -1,18 +1,23 @@
+#Imports
 from flask import render_template, redirect, request, session, url_for, flash
 from flask import current_app as app
+from werkzeug.security import check_password_hash, generate_password_hash
 from .models import *
 from .database import db
 from sqlalchemy import or_
-from werkzeug.security import generate_password_hash, check_password_hash
 
 from datetime import datetime
-# Home Route
+
+# Routes
+
+#Home Routes
+
 
 @app.route('/')
 def home():
     return redirect('/login')
 
-# Login Route
+#login, registration and logout routes
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -63,6 +68,8 @@ def login():
             return redirect('/user_dashboard')
 
     return render_template('login.html')
+
+
 #Log out
 @app.route('/logout')
 def logout():
@@ -71,6 +78,7 @@ def logout():
     return redirect('/login')
 
 # Registration Route
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
 
@@ -130,7 +138,15 @@ def register():
         return redirect('/login')
 
     return render_template('register.html')
-#Dashboard
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('You have been logged out.', 'info')
+    return redirect('/login')
+
+# Comman Dashbaord routes(for navigation purpose)
 @app.route('/dashboard')
 def dashboard():
 
@@ -147,11 +163,71 @@ def dashboard():
 
     else:
         return redirect('/user_dashboard')
+  
+#Update profile
+
+@app.route('/profile', methods=['GET', 'POST'])
+def profile():
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    user = User.query.get_or_404(session['user_id'])
+
+    if request.method == 'POST':
+
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+
+        existing_user = User.query.filter(
+            User.username == username,
+            User.id != user.id
+        ).first()
+
+        if existing_user:
+            flash('Username already exists.', 'danger')
+            return redirect(request.url)
+
+        existing_email = User.query.filter(
+            User.email == email,
+            User.id != user.id
+        ).first()
+
+        if existing_email:
+            flash('Email already exists.', 'danger')
+            return redirect(request.url)
+
+        user.username = username
+        user.email = email
+
+        if password:
+            user.password = password
+
+        db.session.commit()
+
+        flash('Profile updated successfully.', 'success')
+
+        if session.get('role') == 'staff':
+            return redirect('/staff_dashboard')
+
+        elif session.get('role') == 'admin':
+            return redirect('/admin_dashboard')
+
+        else:
+            return redirect('/dashboard')
+
+    return render_template(
+        'profile.html',
+        user=user
+    )
     
-# -------------Admin--------------
-#Dashabord
+# -------------ADMIN Routes--------------
+
+#Admin dashbaord
+
 @app.route('/admin_dashboard')
-def admin_dashbaord():
+def admin_dashboard():
     if 'user_id' not in session:
         return redirect('/login')
     if session.get('role') != 'admin':
@@ -194,7 +270,7 @@ def admin_dashbaord():
     chart_data=chart_data
     )
     
-#Manage User
+# Admin manage User
 
 @app.route('/admin/users')
 def admin_users():
@@ -217,7 +293,7 @@ def admin_users():
             )
         )
 
-    users = query.all()
+    users = query.order_by(User.username).all()
 
     return render_template(
         'admin_users.html',
@@ -225,7 +301,39 @@ def admin_users():
         search=search
     )
     
-#Manage Staff
+# Admin blacklist or ublacklist user
+
+@app.route('/admin/blacklist_staff/<int:id>')
+def blacklist_staff(id):
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if session.get('role') != 'admin':
+        return redirect('/login')
+
+    staff = User.query.get_or_404(id)
+    staff.is_blacklist = True
+    db.session.commit()
+    flash('Staff has been blacklisted.', 'warning')
+    return redirect('/admin/staff')
+
+@app.route('/admin/unblacklist_user/<int:id>')
+def unblacklist_user(id):
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if session.get('role') != 'admin':
+        return redirect('/login')
+
+    user = User.query.get_or_404(id)
+    user.is_blacklist = False
+    db.session.commit()
+    flash('User removed from blacklist.', 'success')
+    return redirect('/admin/users')
+
+# Admin manage staff
 
 @app.route('/admin/staff')
 def admin_staff():
@@ -252,48 +360,15 @@ def admin_staff():
 
         staffs = User.query.filter_by(
             type='staff'
-        ).all()
+        ).order_by(User.username)
 
     return render_template(
         'admin_staff.html',
         staffs=staffs,
         search=search
     )
-#View all
-@app.route('/admin/all')
-def admin_all():
 
-    if 'user_id' not in session:
-        return redirect('/login')
-
-    if session.get('role') != 'admin':
-        return redirect('/login')
-
-    search = request.args.get('search', '').strip()
-
-    if search:
-
-        us = User.query.filter(
-            User.type != 'admin',
-            db.or_(
-                User.username.ilike(f'%{search}%'),
-                User.email.ilike(f'%{search}%')
-            )
-        ).all()
-
-    else:
-
-        us = User.query.filter(
-            User.type.in_(['user', 'staff'])
-        ).all()
-
-    return render_template(
-        'admin_remove.html',
-        us=us,
-        search=search
-    )
-
-#Pedning Staff and  Approve Staff
+# Admin manage pending staff
 
 @app.route('/admin/pending_staff')
 def pending_staff():
@@ -314,6 +389,9 @@ def pending_staff():
         staffs=staffs
     )
 
+# Admin approve pending staff
+
+
 @app.route('/admin/approve_staff/<int:id>')
 def approve_staff(id):
 
@@ -328,6 +406,8 @@ def approve_staff(id):
     db.session.commit()
     flash('Staff approved successfully.', 'success')
     return redirect('/admin/pending_staff')
+
+# Admin reject pending staff
 
 @app.route('/admin/reject_staff/<int:id>')
 def reject_staff(id):
@@ -347,77 +427,7 @@ def reject_staff(id):
 
     return redirect('/admin/pending_staff')
 
-#Blacklist and Unblack
-
-    
-@app.route('/admin/blacklist_user/<int:id>')
-def blacklist_user(id):
-
-    if 'user_id' not in session:
-        return redirect('/login')
-
-    if session.get('role') != 'admin':
-        return redirect('/login')
-
-    user = User.query.get_or_404(id)
-    user.is_blacklist = True
-    db.session.commit()
-    flash('User has been blacklisted.', 'warning')
-    return redirect('/admin/users')
-
-
-
-@app.route('/admin/unblacklist_user/<int:id>')
-def unblacklist_user(id):
-
-    if 'user_id' not in session:
-        return redirect('/login')
-
-    if session.get('role') != 'admin':
-        return redirect('/login')
-
-    user = User.query.get_or_404(id)
-    user.is_blacklist = False
-    db.session.commit()
-    flash('User removed from blacklist.', 'success')
-    return redirect('/admin/users')
-
-@app.route('/admin/blacklist_staff/<int:id>')
-def blacklist_staff(id):
-
-    if 'user_id' not in session:
-        return redirect('/login')
-
-    if session.get('role') != 'admin':
-        return redirect('/login')
-
-    staff = User.query.get_or_404(id)
-    staff.is_blacklist = True
-    db.session.commit()
-    flash('Staff has been blacklisted.', 'warning')
-    return redirect('/admin/staff')
-
-
-@app.route('/admin/unblacklist_staff/<int:id>')
-def unblacklist_staff(id):
-
-    if 'user_id' not in session:
-        return redirect('/login')
-
-    if session.get('role') != 'admin':
-        return redirect('/login')
-
-    staff = User.query.get_or_404(id)
-
-    staff.is_blacklist = False
-
-    db.session.commit()
-    flash('Staff removed from blacklist.', 'success')
-    return redirect('/admin/staff')
-
-
-
-#View treak
+# Admin view trek
 
 @app.route('/admin/treks')
 def admin_treks():
@@ -446,8 +456,9 @@ def admin_treks():
 
     # Approved Staff
     staffs = User.query.filter_by(
-        type='staff',
-        is_approved=True
+    type='staff',
+    is_approved=True,
+    is_blacklist=False
     ).all()
 
     return render_template(
@@ -458,6 +469,7 @@ def admin_treks():
     )    
 
 # Add treak
+
 @app.route('/admin/add_trek', methods=['GET', 'POST'])
 def add_trek():
 
@@ -484,7 +496,9 @@ def add_trek():
             request.form['end_date'],
             '%Y-%m-%d'
         ).date()
+        from datetime import date
 
+        # Validate dates
         if end < start:
             flash(
                 'End Date cannot be before Start Date.',
@@ -523,6 +537,7 @@ def add_trek():
 
     return render_template('add_trek.html')
 
+
 #Edit trek
 @app.route('/admin/edit_trek/<int:id>', methods=['GET', 'POST'])
 def edit_trek(id):
@@ -542,32 +557,14 @@ def edit_trek(id):
     ).all()
 
     if request.method == 'POST':
-
         trek.name = request.form['name']
         trek.location = request.form['location']
         trek.difficulty = request.form['difficulty']
         trek.duration = int(request.form['duration'])
         trek.status = request.form['status']
-
-        new_total_slot = int(request.form['total_slot'])
-
-        booked = Booking.query.filter_by(
-            trek_id=trek.id
-        ).count()
-
-        if new_total_slot < booked:
-            flash(
-                f'Total slots cannot be less than booked participants ({booked}).',
-                'danger'
-            )
-            return redirect(request.url)
-
-        trek.total_slot = new_total_slot
-        trek.available_slot = new_total_slot - booked
-
-        staff_id = request.form.get('staff_id')
+        trek.available_slot = int(request.form['available_slot'])
+        staff_id = request.form.get('staff_id',)
         trek.staff_id = int(staff_id) if staff_id else None
-
         db.session.commit()
 
         flash(
@@ -576,12 +573,8 @@ def edit_trek(id):
         )
 
         return redirect('/admin/treks')
+    return render_template('edit_trek.html', trek=trek, staffs=staffs)
 
-    return render_template(
-        'edit_trek.html',
-        trek=trek,
-        staffs=staffs
-    )
 #Delete treak
 
 
@@ -604,7 +597,90 @@ def delete_trek(id):
     flash('Trek deleted successfully.', 'success')
     return redirect('/admin/treks')
 
-# Staff Routes
+# Admin booking history
+@app.route('/admin/bookings')
+def admin_bookings():
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if session.get('role') != 'admin':
+        return redirect('/login')
+
+    admin = User.query.get(session['user_id'])
+
+    if not admin:
+        session.clear()
+        return redirect('/login')
+
+    bookings = Booking.query.order_by(
+        Booking.booking_date.desc(),
+        Booking.id.desc()
+    ).all()
+
+    return render_template(
+        'admin_bookings.html',
+        bookings=bookings
+    )
+    
+#Admin trek details
+
+@app.route('/admin/trek/<int:trek_id>')
+def admin_trek_details(trek_id):
+
+    if 'user_id' not in session:
+        return redirect('/login')
+
+    if session.get('role') != 'admin':
+        return redirect('/login')
+
+    admin = User.query.get(session['user_id'])
+
+    if not admin:
+        session.clear()
+        return redirect('/login')
+
+    trek = Trek.query.get_or_404(trek_id)
+
+    bookings = Booking.query.filter(
+    Booking.trek_id == trek.id,
+    Booking.status.in_(["Booked", "Completed"])
+    ).order_by(
+        Booking.booking_date.desc(),
+        Booking.id.desc()
+    ).all()
+
+    total_participants = len(bookings)
+
+    booked_count = Booking.query.filter_by(
+        trek_id=trek.id,
+        status='Booked'
+    ).count()
+
+    completed_count = Booking.query.filter_by(
+        trek_id=trek.id,
+        status='Completed'
+    ).count()
+
+    cancelled_count = Booking.query.filter_by(
+        trek_id=trek.id,
+        status='Cancelled'
+    ).count()
+
+    return render_template(
+        'admin_trek_details.html',
+        trek=trek,
+        bookings=bookings,
+        total_participants=total_participants,
+        booked_count=booked_count,
+        completed_count=completed_count,
+        cancelled_count=cancelled_count
+    )
+
+
+# -------------STAFF Routes--------------
+
+#Staff dashbaord
 
 @app.route('/staff_dashboard')
 def staff_dashboard():
@@ -613,6 +689,13 @@ def staff_dashboard():
         return redirect('/login')
 
     if session.get('role') != 'staff':
+        return redirect('/login')
+
+    # Blacklist check
+    staff = User.query.get(session['user_id'])
+    if not staff or staff.is_blacklist:
+        session.clear()
+        flash('Your account has been blacklisted.', 'danger')
         return redirect('/login')
 
     treks = Trek.query.filter_by(
@@ -627,10 +710,9 @@ def staff_dashboard():
     ).count()
 
     total_participants = Booking.query.join(Trek).filter(
-        Trek.staff_id == session['user_id']
+        Trek.staff_id == session['user_id'],
+        Booking.status == 'Booked'
     ).count()
-
-    #  Chart Data
 
     chart_labels = []
     chart_data = []
@@ -638,12 +720,12 @@ def staff_dashboard():
     for trek in treks:
 
         participant_count = Booking.query.filter_by(
-            trek_id=trek.id
+            trek_id=trek.id,
+            status='Booked'
         ).count()
 
         chart_labels.append(trek.name)
         chart_data.append(participant_count)
-
 
     return render_template(
         'staff_dashboard.html',
@@ -651,10 +733,10 @@ def staff_dashboard():
         total_treks=total_treks,
         open_treks=open_treks,
         total_participants=total_participants,
-
         chart_labels=chart_labels,
         chart_data=chart_data
     )
+    
 # Staff manage treks
 
 @app.route('/staff/manage_trek/<int:trek_id>', methods=['GET', 'POST'])
@@ -665,6 +747,7 @@ def manage_trek(trek_id):
 
     if session.get('role') != 'staff':
         return redirect('/login')
+    
 
     trek = Trek.query.filter_by(
         id=trek_id,
@@ -729,8 +812,7 @@ def manage_trek(trek_id):
         trek=trek,
         bookings=bookings,
         count=booked_count
-    )
-
+    )    
 #Update profile
 
 @app.route('/profile', methods=['GET', 'POST'])
@@ -799,14 +881,24 @@ def user_dashboard():
     if session.get('role') != 'user':
         return redirect('/login')
 
+    # Check if user is blacklisted
+    user = User.query.get(session['user_id'])
 
-    # Search & Filters
+    if not user or user.is_blacklist:
+        session.clear()
+        flash('Your account has been blacklisted.', 'danger')
+        return redirect('/login')
+
+    # ---------------- Search & Filters ---------------- #
 
     search = request.args.get('search', '').strip()
     difficulty = request.args.get('difficulty', '').strip()
     location = request.args.get('location', '').strip()
 
-    query = Trek.query.filter_by(status='Open')
+    query = Trek.query.filter(
+        Trek.status == 'Open',
+        Trek.available_slot > 0
+    )
 
     if search:
         query = query.filter(
@@ -825,29 +917,24 @@ def user_dashboard():
 
     treks = query.all()
 
- 
-    # Dashboard Cards
- 
+    # ---------------- Dashboard Cards ---------------- #
 
-    # Total Booking History
     total_bookings = Booking.query.filter_by(
         user_id=session['user_id']
     ).count()
 
-    # Only Active Upcoming Bookings
     upcoming_treks = Booking.query.join(Trek).filter(
         Booking.user_id == session['user_id'],
         Booking.status == 'Booked',
         Trek.status == 'Open'
     ).count()
 
-    available_treks = Trek.query.filter_by(
-        status='Open'
+    available_treks = Trek.query.filter(
+        Trek.status == 'Open',
+        Trek.available_slot > 0
     ).count()
 
- 
-    # Pie Chart
-    
+    # ---------------- Pie Chart ---------------- #
 
     booked_count = Booking.query.filter_by(
         user_id=session['user_id'],
@@ -876,8 +963,7 @@ def user_dashboard():
         cancelled_count
     ]
 
-    # Participants Chart
-
+    # ---------------- Participants Chart ---------------- #
 
     trek_labels = []
     participant_data = []
@@ -906,7 +992,7 @@ def user_dashboard():
 
     return render_template(
         'user_dashboard.html',
-        username=session.get('username'),
+        username=user.username,
         treks=treks,
 
         total_bookings=total_bookings,
@@ -1034,6 +1120,7 @@ def user_dashboard():
     )
 
 #Book trek
+
 @app.route('/book_trek/<int:trek_id>')
 def book_trek(trek_id):
 
@@ -1044,6 +1131,10 @@ def book_trek(trek_id):
         return redirect('/login')
 
     user = User.query.get(session['user_id'])
+
+    if not user:
+        session.clear()
+        return redirect('/login')
 
     if user.is_blacklist:
         flash(
@@ -1057,6 +1148,13 @@ def book_trek(trek_id):
     if trek.status != 'Open':
         flash(
             'Cannot book trek. Trek is not open.',
+            'warning'
+        )
+        return redirect('/user_dashboard')
+
+    if trek.staff_id is None:
+        flash(
+            'This trek has no assigned staff yet.',
             'warning'
         )
         return redirect('/user_dashboard')
@@ -1090,16 +1188,7 @@ def book_trek(trek_id):
 
     db.session.add(new_booking)
 
-    # Save booking first
-    db.session.flush()
-
-    # Recalculate available slots
-    booked_count = Booking.query.filter_by(
-        trek_id=trek.id,
-        status='Booked'
-    ).count()
-
-    trek.available_slot = trek.total_slot - booked_count
+    trek.available_slot -= 1
 
     db.session.commit()
 
@@ -1112,17 +1201,28 @@ def book_trek(trek_id):
 
 
 # User my booking
+
 @app.route('/my_bookings')
 def my_bookings():
 
     if 'user_id' not in session:
         return redirect('/login')
 
+    if session.get('role') != 'user':
+        return redirect('/login')
+
+    user = User.query.get(session['user_id'])
+
+    if not user or user.is_blacklist:
+        session.clear()
+        flash('Your account has been blacklisted.', 'danger')
+        return redirect('/login')
+
     booking_status = request.args.get('booking_status', '').strip()
     trek_status = request.args.get('trek_status', '').strip()
 
     query = Booking.query.join(Trek).filter(
-        Booking.user_id == session['user_id']
+        Booking.user_id == user.id
     )
 
     if booking_status:
@@ -1145,6 +1245,9 @@ def my_bookings():
         booking_status=booking_status,
         trek_status=trek_status
     )
+
+#User trek details
+
 @app.route('/trek/<int:trek_id>')
 def trek_details(trek_id):
 
@@ -1154,10 +1257,24 @@ def trek_details(trek_id):
     if session.get('role') != 'user':
         return redirect('/login')
 
+    user = User.query.get(session['user_id'])
+
+    if not user or user.is_blacklist:
+        session.clear()
+        flash('Your account has been blacklisted.', 'danger')
+        return redirect('/login')
+
     trek = Trek.query.get_or_404(trek_id)
 
+    if trek.status != 'Open':
+        flash(
+            'This trek is not available.',
+            'warning'
+        )
+        return redirect('/user_dashboard')
+
     already_booked = Booking.query.filter_by(
-        user_id=session['user_id'],
+        user_id=user.id,
         trek_id=trek.id,
         status='Booked'
     ).first()
@@ -1167,6 +1284,9 @@ def trek_details(trek_id):
         trek=trek,
         already_booked=already_booked
     )
+
+#User booking trek details
+
 @app.route('/booking/<int:booking_id>')
 def booking_details(booking_id):
 
@@ -1176,15 +1296,27 @@ def booking_details(booking_id):
     if session.get('role') != 'user':
         return redirect('/login')
 
+    user = User.query.get(session['user_id'])
+
+    if not user or user.is_blacklist:
+        session.clear()
+        flash(
+            'Your account has been blacklisted.',
+            'danger'
+        )
+        return redirect('/login')
+
     booking = Booking.query.filter_by(
         id=booking_id,
-        user_id=session['user_id']
+        user_id=user.id
     ).first_or_404()
 
     return render_template(
         'booking_details.html',
         booking=booking
     )
+#User cancel trek
+
 @app.route('/cancel_booking/<int:booking_id>')
 def cancel_booking(booking_id):
 
@@ -1194,9 +1326,19 @@ def cancel_booking(booking_id):
     if session.get('role') != 'user':
         return redirect('/login')
 
+    user = User.query.get(session['user_id'])
+
+    if not user or user.is_blacklist:
+        session.clear()
+        flash(
+            'Your account has been blacklisted.',
+            'danger'
+        )
+        return redirect('/login')
+
     booking = Booking.query.filter_by(
         id=booking_id,
-        user_id=session['user_id']
+        user_id=user.id
     ).first_or_404()
 
     if booking.status != 'Booked':
@@ -1210,16 +1352,7 @@ def cancel_booking(booking_id):
 
     booking.status = 'Cancelled'
 
-    # Update booking status first
-    db.session.flush()
-
-    # Recalculate available slots
-    booked_count = Booking.query.filter_by(
-        trek_id=trek.id,
-        status='Booked'
-    ).count()
-
-    trek.available_slot = trek.total_slot - booked_count
+    booking.trek.available_slot += 1
 
     db.session.commit()
 
@@ -1229,6 +1362,7 @@ def cancel_booking(booking_id):
     )
 
     return redirect('/my_bookings')
+
 
 # ---------------- ADMIN BOOKING HISTORY ---------------- #
 
@@ -1248,48 +1382,4 @@ def admin_bookings():
     return render_template(
         'admin_bookings.html',
         bookings=bookings
-    )
-
-# ---------------- Admin Trek Details ---------------- #
-
-@app.route('/admin/trek/<int:trek_id>')
-def admin_trek_details(trek_id):
-
-    if 'user_id' not in session:
-        return redirect('/login')
-
-    if session.get('role') != 'admin':
-        return redirect('/login')
-
-    trek = Trek.query.get_or_404(trek_id)
-
-    bookings = Booking.query.filter_by(
-        trek_id=trek.id
-    ).all()
-
-    total_participants = len(bookings)
-
-    booked_count = Booking.query.filter_by(
-        trek_id=trek.id,
-        status='Booked'
-    ).count()
-
-    completed_count = Booking.query.filter_by(
-        trek_id=trek.id,
-        status='Completed'
-    ).count()
-
-    cancelled_count = Booking.query.filter_by(
-        trek_id=trek.id,
-        status='Cancelled'
-    ).count()
-
-    return render_template(
-        'admin_trek_details.html',
-        trek=trek,
-        bookings=bookings,
-        total_participants=total_participants,
-        booked_count=booked_count,
-        completed_count=completed_count,
-        cancelled_count=cancelled_count
     )
