@@ -139,13 +139,6 @@ def register():
 
     return render_template('register.html')
 
-
-@app.route('/logout')
-def logout():
-    session.clear()
-    flash('You have been logged out.', 'info')
-    return redirect('/login')
-
 # Comman Dashbaord routes(for navigation purpose)
 @app.route('/dashboard')
 def dashboard():
@@ -538,7 +531,6 @@ def add_trek():
     return render_template('add_trek.html')
 
 
-#Edit trek
 @app.route('/admin/edit_trek/<int:id>', methods=['GET', 'POST'])
 def edit_trek(id):
 
@@ -557,14 +549,45 @@ def edit_trek(id):
     ).all()
 
     if request.method == 'POST':
-        trek.name = request.form['name']
-        trek.location = request.form['location']
+
+        trek.name = request.form['name'].strip()
+        trek.location = request.form['location'].strip()
         trek.difficulty = request.form['difficulty']
         trek.duration = int(request.form['duration'])
         trek.status = request.form['status']
-        trek.available_slot = int(request.form['available_slot'])
-        staff_id = request.form.get('staff_id',)
-        trek.staff_id = int(staff_id) if staff_id else None
+
+        new_total_slot = int(request.form['total_slot'])
+
+        # Count only active bookings
+        booked = Booking.query.filter_by(
+            trek_id=trek.id,
+            status='Booked'
+        ).count()
+
+        if new_total_slot < booked:
+            flash(
+                f'Total slots cannot be less than booked participants ({booked}).',
+                'danger'
+            )
+            return redirect(request.url)
+
+        trek.total_slot = new_total_slot
+        trek.available_slot = new_total_slot - booked
+
+        staff_id = request.form.get('staff_id')
+
+        if staff_id:
+            staff = User.query.filter_by(
+                id=int(staff_id),
+                type='staff',
+                is_approved=True,
+                is_blacklist=False
+            ).first()
+
+            trek.staff_id = staff.id if staff else None
+        else:
+            trek.staff_id = None
+
         db.session.commit()
 
         flash(
@@ -573,8 +596,12 @@ def edit_trek(id):
         )
 
         return redirect('/admin/treks')
-    return render_template('edit_trek.html', trek=trek, staffs=staffs)
 
+    return render_template(
+        'edit_trek.html',
+        trek=trek,
+        staffs=staffs
+    )
 #Delete treak
 
 
@@ -813,64 +840,6 @@ def manage_trek(trek_id):
         bookings=bookings,
         count=booked_count
     )    
-#Update profile
-
-@app.route('/profile', methods=['GET', 'POST'])
-def profile():
-
-    if 'user_id' not in session:
-        return redirect('/login')
-
-    user = User.query.get_or_404(session['user_id'])
-
-    if request.method == 'POST':
-
-        username = request.form['username']
-        email = request.form['email']
-        password = request.form['password']
-
-        existing_user = User.query.filter(
-            User.username == username,
-            User.id != user.id
-        ).first()
-
-        if existing_user:
-            flash('Username already exists.', 'danger')
-            return redirect(request.url)
-
-        existing_email = User.query.filter(
-            User.email == email,
-            User.id != user.id
-        ).first()
-
-        if existing_email:
-            flash('Email already exists.', 'danger')
-            return redirect(request.url)
-
-        user.username = username
-        user.email = email
-
-        if password:
-            user.password = password
-
-        db.session.commit()
-
-        flash('Profile updated successfully.', 'success')
-
-        if session.get('role') == 'staff':
-            return redirect('/staff_dashboard')
-
-        elif session.get('role') == 'admin':
-            return redirect('/admin_dashboard')
-
-        else:
-            return redirect('/dashboard')
-
-    return render_template(
-        'profile.html',
-        user=user
-    )
-    
 # ---------------- USER DASHBOARD ---------------- #
 @app.route('/user_dashboard')
 def user_dashboard():
@@ -1364,22 +1333,3 @@ def cancel_booking(booking_id):
     return redirect('/my_bookings')
 
 
-# ---------------- ADMIN BOOKING HISTORY ---------------- #
-
-@app.route('/admin/bookings')
-def admin_bookings():
-
-    if 'user_id' not in session:
-        return redirect('/login')
-
-    if session.get('role') != 'admin':
-        return redirect('/login')
-
-    bookings = Booking.query.order_by(
-        Booking.booking_date.desc()
-    ).all()
-
-    return render_template(
-        'admin_bookings.html',
-        bookings=bookings
-    )
