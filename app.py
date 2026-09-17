@@ -1,7 +1,10 @@
 from flask import Flask
 from application.database import db
-from application.models  import User
+from application.models import User
+from werkzeug.security import generate_password_hash
+
 app = None
+
 
 def create_app():
     app = Flask(__name__)
@@ -21,21 +24,24 @@ app = create_app()
 
 from application.controllers import *
 
+
+# Initialize database
+with app.app_context():
+    db.create_all()
+
+    admin = User.query.filter_by(type='admin').first()
+
+    if not admin:
+        default_admin = User(
+            username='Ashish (admin)',
+            email='ashish@admin.com',
+            password=generate_password_hash('123'),
+            type='admin'
+        )
+
+        db.session.add(default_admin)
+        db.session.commit()
+
+
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-
-        admin = User.query.filter_by(type='admin').first()
-
-        if not admin:
-            default_admin = User(
-                username='Ashish (admin)',
-                email='ashish@admin.com',
-                password = generate_password_hash('123'),
-                type='admin'
-            )
-
-            db.session.add(default_admin)
-            db.session.commit()
-
     app.run(debug=True)
