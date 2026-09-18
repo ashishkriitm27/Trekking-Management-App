@@ -34,8 +34,7 @@ with app.app_context():
     if not admin:
         default_admin = User(
             username='Ashish (admin)',
-            email='ashish@admin.com',
-            password=generate_password_hash('123'),
+
             type='admin'
         )
 
